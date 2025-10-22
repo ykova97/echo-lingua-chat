@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Plus, LogOut, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import NewChatDialog from "@/components/chat/NewChatDialog";
 
 interface Chat {
   id: string;
@@ -24,7 +23,6 @@ const ChatList = () => {
   const { toast } = useToast();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showNewChat, setShowNewChat] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -213,7 +211,7 @@ const ChatList = () => {
             <p className="text-muted-foreground">
               Start a new chat to break language barriers
             </p>
-            <Button onClick={() => setShowNewChat(true)} size="lg" className="mt-4">
+            <Button onClick={() => navigate("/compose")} size="lg" className="mt-4">
               <Plus className="w-5 h-5 mr-2" />
               Start Chatting
             </Button>
@@ -254,20 +252,11 @@ const ChatList = () => {
 
       {/* Floating Action Button */}
       <button
-        onClick={() => setShowNewChat(true)}
+        onClick={() => navigate("/compose")}
         className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110"
       >
         <Plus className="w-6 h-6" />
       </button>
-
-      <NewChatDialog
-        open={showNewChat}
-        onOpenChange={setShowNewChat}
-        onChatCreated={(chatId) => {
-          setShowNewChat(false);
-          navigate(`/chat/${chatId}`);
-        }}
-      />
     </div>
   );
 };
