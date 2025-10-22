@@ -272,24 +272,30 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </main>
 
-      {/* Input */}
-      <footer className="bg-card border-t border-border p-4">
-        <form onSubmit={sendMessage} className="flex gap-2">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            disabled={loading}
-            className="flex-1 h-12"
-          />
-          <Button
+      {/* Input - iMessage Style */}
+      <footer className="bg-card border-t border-border p-3 safe-area-bottom">
+        <form onSubmit={sendMessage} className="flex items-end gap-2 max-w-4xl mx-auto">
+          <div className="flex-1 relative flex items-center bg-secondary/50 rounded-[24px] border border-border/50 px-4 py-2 min-h-[40px]">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="iMessage"
+              disabled={loading}
+              className="flex-1 bg-transparent border-none outline-none text-[15px] placeholder:text-muted-foreground/60"
+            />
+          </div>
+          <button
             type="submit"
-            size="icon"
             disabled={loading || !newMessage.trim()}
-            className="h-12 w-12"
+            className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+              newMessage.trim() && !loading
+                ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                : 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
+            }`}
           >
-            <Send className="w-5 h-5" />
-          </Button>
+            <Send className="w-[18px] h-[18px]" />
+          </button>
         </form>
       </footer>
     </div>
