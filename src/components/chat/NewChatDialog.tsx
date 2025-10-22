@@ -3,14 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Check } from "lucide-react";
+import { X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface NewChatDialogProps {
   open: boolean;
@@ -115,72 +112,104 @@ const NewChatDialog = ({ open, onOpenChange, onChatCreated }: NewChatDialogProps
     }
   };
 
+  const getSelectedUsers = () => {
+    return users.filter(u => selected.includes(u.id));
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>New Chat</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl h-[600px] p-0 gap-0">
+        {/* iMessage-style Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="text-primary text-[17px] font-normal"
+          >
+            Cancel
+          </button>
+          <h2 className="text-[17px] font-semibold">New Message</h2>
+          <div className="w-[60px]" /> {/* Spacer for centering */}
+        </div>
 
-        <div className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
+        {/* To: Field */}
+        <div className="px-4 py-3 border-b border-border">
+          <div className="flex items-start gap-2">
+            <span className="text-muted-foreground text-[17px] pt-1">To:</span>
+            <div className="flex-1 flex flex-wrap gap-2 items-center">
+              {getSelectedUsers().map((user) => (
+                <Badge
+                  key={user.id}
+                  variant="secondary"
+                  className="rounded-full px-3 py-1 flex items-center gap-1"
+                >
+                  {user.name}
+                  <button
+                    onClick={() => toggleUser(user.id)}
+                    className="hover:bg-secondary-foreground/10 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+              <input
+                type="text"
+                placeholder={selected.length === 0 ? "Name or phone number" : ""}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[17px] placeholder:text-muted-foreground/60 min-w-[120px]"
+              />
+            </div>
           </div>
+        </div>
 
-          {/* User List */}
-          <div className="max-h-80 overflow-y-auto space-y-2">
-            {filteredUsers.map((user) => (
+        {/* Contacts List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredUsers.map((user) => {
+            const isSelected = selected.includes(user.id);
+            return (
               <button
                 key={user.id}
                 onClick={() => toggleUser(user.id)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors"
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors border-b border-border/50 ${
+                  isSelected ? 'bg-secondary/30' : ''
+                }`}
               >
-                <Avatar>
+                <Avatar className="w-10 h-10">
                   <AvatarImage src={user.profile_image} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                  <AvatarFallback className="bg-primary/10 text-primary text-[15px]">
                     {user.name[0]}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
-                  <p className="font-medium">{user.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-normal text-[17px]">{user.name}</p>
+                  <p className="text-[13px] text-muted-foreground">
                     {user.preferred_language}
                   </p>
                 </div>
-                {selected.includes(user.id) && (
+                {isSelected && (
                   <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                    <Check className="w-4 h-4 text-primary-foreground" />
+                    <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
                 )}
               </button>
-            ))}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={createChat}
-              disabled={selected.length === 0 || loading}
-              className="flex-1"
-            >
-              {loading ? "Creating..." : `Chat ${selected.length > 0 ? `(${selected.length})` : ""}`}
-            </Button>
-          </div>
+            );
+          })}
         </div>
+
+        {/* Create Button - Only show when users selected */}
+        {selected.length > 0 && (
+          <div className="p-4 border-t border-border">
+            <button
+              onClick={createChat}
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full py-3 text-[17px] font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? "Creating..." : `Create Chat ${selected.length > 1 ? `with ${selected.length} people` : ""}`}
+            </button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
