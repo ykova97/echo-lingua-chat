@@ -37,17 +37,15 @@ const ComposeNewMessage = () => {
   }, [toFieldText]);
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       navigate("/auth");
       return;
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
     setCurrentUser(profile);
   };
@@ -81,44 +79,34 @@ const ComposeNewMessage = () => {
       avatar_url: contact.profile_image,
     };
 
-    // Check for duplicates
-    if (!recipients.find(r => r.contact_id === recipient.contact_id)) {
+    if (!recipients.find((r) => r.contact_id === recipient.contact_id)) {
       setRecipients([...recipients, recipient]);
       setToFieldText("");
       setSuggestions([]);
       setShowSuggestions(false);
-      
-      // Light haptic feedback
-      if (navigator.vibrate) {
-        navigator.vibrate(10);
-      }
+      if (navigator.vibrate) navigator.vibrate(10);
     }
   };
 
   const removeRecipient = (recipientId: string) => {
-    setRecipients(recipients.filter(r => r.id !== recipientId));
-    
-    // Light haptic feedback
-    if (navigator.vibrate) {
-      navigator.vibrate(10);
-    }
+    setRecipients(recipients.filter((r) => r.id !== recipientId));
+    if (navigator.vibrate) navigator.vibrate(10);
   };
 
   const handleCancel = () => {
     navigate("/chats");
   };
 
+  // === NEW OPTIMIZED CHAT CREATION ===
   const handleCreateChat = async (message: string) => {
     if (recipients.length === 0) return;
-    
+
     try {
-      // Get the authenticated user ID directly
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      console.log("Auth check:", { user: user?.id, authError });
-      
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
       if (authError || !user) {
-        console.error("Auth error:", authError);
         toast({
           title: "Authentication Error",
           description: "Please sign in again.",
@@ -127,7 +115,7 @@ const ComposeNewMessage = () => {
         navigate("/auth");
         return;
       }
-      
+
       if (!currentUser) {
         toast({
           title: "Error",
@@ -137,105 +125,66 @@ const ComposeNewMessage = () => {
         return;
       }
 
-      console.log("Starting chat creation with recipients:", recipients);
-      console.log("Current user profile:", currentUser);
-      console.log("Authenticated user ID:", user.id);
-      
-      // Create or find existing chat - use auth user ID
-      const participantIds = [user.id, ...recipients.map(r => r.contact_id)];
-      console.log("Participant IDs:", participantIds);
-      
-      // Check for existing chat with same participants
-      const { data: existingChats, error: fetchError } = await supabase
-        .from("chats")
-        .select(`
-          *,
-          chat_participants!inner(user_id)
-        `);
+      // Build participant set (must include current user)
+      const participantIds = Array.from(new Set([user.id, ...recipients.map((r) => r.contact_id)]));
 
-      if (fetchError) {
-        console.error("Error fetching chats:", fetchError);
-        throw fetchError;
-      }
-
-      let chatId = null;
-
-      // Find chat with exact same participants
-      const matchingChat = existingChats?.find(chat => {
-        const chatParticipants = chat.chat_participants.map((p: any) => p.user_id).sort();
-        return chatParticipants.length === participantIds.length &&
-          chatParticipants.every((id: string, i: number) => id === participantIds.sort()[i]);
+      // Use RPC to find or create chat
+      const { data: chatId, error: rpcError } = await supabase.rpc("find_or_create_chat", {
+        participant_ids: participantIds,
       });
 
-      if (matchingChat) {
-        console.log("Found existing chat:", matchingChat.id);
-        chatId = matchingChat.id;
-      } else {
-        console.log("Creating new chat with data:", {
-          type: participantIds.length > 2 ? "group" : "direct",
-          name: participantIds.length > 2 ? recipients.map(r => r.display_name).join(", ") : null,
-          created_by: user.id,
+      if (rpcError || !chatId) {
+        console.error("find_or_create_chat error:", rpcError);
+        toast({
+          title: "Error",
+          description: "Could not create or find the chat.",
+          variant: "destructive",
         });
-        
-        // Create new chat - use auth user ID
-        const { data: newChat, error: chatError } = await supabase
-          .from("chats")
-          .insert({
-            type: participantIds.length > 2 ? "group" : "direct",
-            name: participantIds.length > 2 ? recipients.map(r => r.display_name).join(", ") : null,
-            created_by: user.id,
-          })
-          .select()
-          .single();
-
-        if (chatError) {
-          console.error("Error creating chat:", chatError);
-          console.error("Chat error details:", JSON.stringify(chatError, null, 2));
-          throw chatError;
-        }
-        
-        console.log("Chat created successfully:", newChat);
-        chatId = newChat.id;
-
-        // Add participants
-        console.log("Adding participants...");
-        const participantInserts = participantIds.map(userId => ({
-          chat_id: chatId,
-          user_id: userId,
-        }));
-
-        const { error: participantError } = await supabase
-          .from("chat_participants")
-          .insert(participantInserts);
-
-        if (participantError) {
-          console.error("Error adding participants:", participantError);
-          throw participantError;
-        }
-        console.log("Participants added successfully");
+        return;
       }
 
-      // Send initial message using edge function if provided
-      if (message.trim() && chatId) {
-        console.log("Sending initial message via edge function...");
-        const { data, error: messageError } = await supabase.functions.invoke("translate-message", {
+      // Optional: client-side auto name for groups
+      if (participantIds.length > 2) {
+        const { data: profs, error: profErr } = await supabase
+          .from("profiles")
+          .select("id, name")
+          .in("id", participantIds);
+
+        if (!profErr) {
+          const groupName = (profs || [])
+            .map((p) => p?.name?.trim())
+            .filter(Boolean)
+            .slice(0, 5)
+            .join(", ");
+          if (groupName) {
+            await supabase.from("chats").update({ name: groupName }).eq("id", chatId).is("name", null);
+          }
+        }
+      }
+
+      // Send initial message via Edge Function
+      if (message.trim()) {
+        const { error: sendErr } = await supabase.functions.invoke("translate-message", {
           body: {
             chatId,
-            message: message,
-            sourceLanguage: currentUser.preferred_language || "en",
+            message,
+            sourceLanguage: currentUser.preferred_language || "auto",
             replyToId: null,
+            attachmentUrl: null,
+            attachmentType: null,
           },
         });
 
-        if (messageError) {
-          console.error("Error sending message:", messageError);
-          throw messageError;
+        if (sendErr) {
+          console.error("Message send error:", sendErr);
+          toast({
+            title: "Message not sent",
+            description: "Chat created but sending failed. Try again.",
+            variant: "destructive",
+          });
         }
-        console.log("Message sent successfully:", data);
       }
 
-      // Navigate to chat
-      console.log("Navigating to chat:", chatId);
       navigate(`/chat/${chatId}`);
     } catch (error: any) {
       console.error("Error creating chat:", error);
@@ -247,11 +196,11 @@ const ComposeNewMessage = () => {
     }
   };
 
-  const hasValidRecipients = recipients.length > 0 && recipients.every(r => r.is_valid);
+  const hasValidRecipients = recipients.length > 0 && recipients.every((r) => r.is_valid);
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Navigation Bar */}
+      {/* Top Navigation */}
       <div className="flex items-center justify-between h-[44px] px-4 border-b border-border/40 safe-area-inset-top">
         <Button
           variant="ghost"
@@ -261,10 +210,10 @@ const ComposeNewMessage = () => {
           Cancel
         </Button>
         <h1 className="text-[17px] font-medium">New Message</h1>
-        <div className="w-[60px]" /> {/* Spacer for centering */}
+        <div className="w-[60px]" />
       </div>
 
-      {/* Recipient Input Row */}
+      {/* Recipient input */}
       <div className="border-b border-border/40">
         <RecipientInput
           recipients={recipients}
@@ -275,25 +224,20 @@ const ComposeNewMessage = () => {
         />
       </div>
 
-      {/* Search Results */}
+      {/* Search results */}
       {showSuggestions && suggestions.length > 0 && (
-        <ContactSuggestions
-          suggestions={suggestions}
-          onSelectContact={addRecipient}
-        />
+        <ContactSuggestions suggestions={suggestions} onSelectContact={addRecipient} />
       )}
 
-      {/* Empty State */}
+      {/* Empty state */}
       {!showSuggestions && recipients.length === 0 && (
         <div className="flex-1 flex items-center justify-center text-muted-foreground text-[15px] px-6 text-center">
-          Enter a name or email to start a conversation
+          Enter a name, phone, or email to start a conversation
         </div>
       )}
 
-      {/* Message Composer - Only shown when recipients exist */}
-      {hasValidRecipients && (
-        <MessageComposer onSend={handleCreateChat} />
-      )}
+      {/* Message composer */}
+      {hasValidRecipients && <MessageComposer onSend={handleCreateChat} />}
     </div>
   );
 };
