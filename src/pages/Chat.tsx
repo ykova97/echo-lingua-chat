@@ -154,7 +154,7 @@ const Chat = () => {
     if (!currentUser?.id || !chatId) return;
 
     const ch = supabase
-      .channel(`chat:${chatId}:translations:${currentUser.id}`)
+      .channel(`chat:${chatId}:updates:${currentUser.id}`)
       .on(
         "postgres_changes",
         {
@@ -181,7 +181,29 @@ const Chat = () => {
         async (payload) => {
           const newMsg = payload.new as any;
           
-          // Mark new message as read if from someone else
+          // Get sender profile
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, profile_image")
+            .eq("id", newMsg.sender_id)
+            .single();
+          
+          // Add message to list immediately
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: newMsg.id,
+              sender_id: newMsg.sender_id,
+              sender_name: profile?.name,
+              sender_image: profile?.profile_image,
+              original_text: newMsg.original_text,
+              source_language: newMsg.source_language,
+              created_at: newMsg.created_at,
+              reply_to_id: newMsg.reply_to_id,
+            },
+          ]);
+          
+          // Mark as read if from someone else
           if (newMsg.sender_id !== currentUser.id) {
             await supabase
               .from("message_read_receipts")
@@ -190,6 +212,16 @@ const Chat = () => {
                 user_id: currentUser.id
               });
           }
+          
+          // Auto-scroll to bottom
+          setTimeout(() => {
+            if (scrollRef.current) {
+              scrollRef.current.scrollTo({
+                top: scrollRef.current.scrollHeight,
+                behavior: "smooth",
+              });
+            }
+          }, 100);
         },
       )
       .subscribe();
@@ -202,16 +234,20 @@ const Chat = () => {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !currentUser?.id || !chatId) return;
 
+    const messageText = newMessage;
+    setNewMessage("");
+
     try {
-      const { error } = await supabase.from("messages").insert({
-        chat_id: chatId,
-        sender_id: currentUser.id,
-        original_text: newMessage,
-        source_language: "en",
+      const { error } = await supabase.functions.invoke("translate-message", {
+        body: {
+          chatId: chatId,
+          message: messageText,
+          sourceLanguage: currentUser.preferred_language || "en",
+        },
       });
 
       if (error) throw error;
-      setNewMessage("");
+      
       setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTo({
@@ -226,6 +262,7 @@ const Chat = () => {
         description: "Failed to send your message",
         variant: "destructive",
       });
+      setNewMessage(messageText);
     }
   };
 

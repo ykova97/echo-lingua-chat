@@ -23,11 +23,29 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_AI_API_KEY")!; // set in Env
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "No authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const body = await req.json();
     const { chatId, message, sourceLanguage, replyToId, attachmentUrl, attachmentType } = body;
@@ -44,12 +62,12 @@ serve(async (req) => {
       .from("messages")
       .insert({
         chat_id: chatId,
+        sender_id: user.id,
         original_text: message,
-        source_language: sourceLanguage || null,
+        source_language: sourceLanguage || "en",
         reply_to_id: replyToId || null,
         attachment_url: attachmentUrl || null,
         attachment_type: attachmentType || null,
-        // sender_id comes from RLS; if you require system insert, pass from client auth
       })
       .select("*")
       .single();
