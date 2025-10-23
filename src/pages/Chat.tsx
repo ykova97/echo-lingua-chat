@@ -358,7 +358,7 @@ const Chat = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3 flex items-center gap-3">
+      <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/chats")}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -400,7 +400,7 @@ const Chat = () => {
       </main>
 
       {/* Input - iMessage Style */}
-      <footer className="bg-card border-t border-border safe-area-bottom">
+      <footer className="sticky bottom-0 z-10 bg-card border-t border-border safe-area-bottom">
         <ReplyPreview 
           replyingTo={replyingTo} 
           onCancel={() => setReplyingTo(null)} 
