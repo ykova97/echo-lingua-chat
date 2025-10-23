@@ -110,9 +110,19 @@ const ComposeNewMessage = () => {
 
   const handleCreateChat = async (message: string) => {
     if (recipients.length === 0) return;
+    
+    if (!currentUser || !currentUser.id) {
+      toast({
+        title: "Error",
+        description: "User not loaded. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       console.log("Starting chat creation with recipients:", recipients);
+      console.log("Current user:", currentUser);
       
       // Create or find existing chat
       const participantIds = [currentUser.id, ...recipients.map(r => r.contact_id)];
@@ -182,23 +192,23 @@ const ComposeNewMessage = () => {
         console.log("Participants added successfully");
       }
 
-      // Send initial message if provided
+      // Send initial message using edge function if provided
       if (message.trim() && chatId) {
-        console.log("Sending initial message...");
-        const { error: messageError } = await supabase
-          .from("messages")
-          .insert({
-            chat_id: chatId,
-            sender_id: currentUser.id,
-            original_text: message,
-            source_language: currentUser.preferred_language || "en",
-          });
+        console.log("Sending initial message via edge function...");
+        const { data, error: messageError } = await supabase.functions.invoke("translate-message", {
+          body: {
+            chatId,
+            message: message,
+            sourceLanguage: currentUser.preferred_language || "en",
+            replyToId: null,
+          },
+        });
 
         if (messageError) {
           console.error("Error sending message:", messageError);
           throw messageError;
         }
-        console.log("Message sent successfully");
+        console.log("Message sent successfully:", data);
       }
 
       // Navigate to chat
