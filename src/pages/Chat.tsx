@@ -2,12 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Send, Globe } from "lucide-react";
+import { ArrowLeft, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { ReplyPreview } from "@/components/chat/ReplyPreview";
+import { MessageComposer } from "@/components/compose/MessageComposer";
 
 interface Message {
   id: string;
@@ -25,6 +25,8 @@ interface Message {
     original_text: string;
   };
   is_read?: boolean;
+  attachment_url?: string;
+  attachment_type?: string;
 }
 
 const Chat = () => {
@@ -32,7 +34,6 @@ const Chat = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [chatInfo, setChatInfo] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -281,9 +282,8 @@ const Chat = () => {
     }
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !currentUser) return;
+  const sendMessage = async (message: string, attachmentUrl?: string, attachmentType?: string) => {
+    if ((!message.trim() && !attachmentUrl) || !currentUser) return;
 
     setLoading(true);
     try {
@@ -291,15 +291,16 @@ const Chat = () => {
       const { data, error } = await supabase.functions.invoke("translate-message", {
         body: {
           chatId,
-          message: newMessage,
+          message: message || '',
           sourceLanguage: currentUser.preferred_language,
           replyToId: replyingTo?.id,
+          attachmentUrl,
+          attachmentType,
         },
       });
 
       if (error) throw error;
 
-      setNewMessage("");
       setReplyingTo(null);
     } catch (error: any) {
       toast({
@@ -421,31 +422,10 @@ const Chat = () => {
           replyingTo={replyingTo} 
           onCancel={() => setReplyingTo(null)} 
         />
-        <div className="p-2">
-          <form onSubmit={sendMessage} className="flex items-end gap-2">
-            <div className="flex-1 relative flex items-center bg-secondary/50 rounded-[20px] border border-border/50 px-3 py-2 min-h-[36px]">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="iMessage"
-                disabled={loading}
-                className="flex-1 bg-transparent border-none outline-none text-[15px] placeholder:text-muted-foreground/60 py-1"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !newMessage.trim()}
-              className={`w-[32px] h-[32px] rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
-                newMessage.trim() && !loading
-                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                  : 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
-              }`}
-            >
-              <Send className="w-[16px] h-[16px]" />
-            </button>
-          </form>
-        </div>
+        <MessageComposer
+          onSend={sendMessage}
+          disabled={loading}
+        />
       </footer>
     </div>
   );

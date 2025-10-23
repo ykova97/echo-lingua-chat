@@ -20,6 +20,8 @@ interface MessageBubbleProps {
       original_text: string;
     };
     is_read?: boolean;
+    attachment_url?: string;
+    attachment_type?: string;
   };
   isOwn: boolean;
   showOriginal: boolean;
@@ -53,6 +55,7 @@ const MessageBubble = ({
 }: MessageBubbleProps) => {
   const displayText = showOriginal ? message.original_text : (message.translated_text || message.original_text);
   const hasTranslation = !isOwn && message.translated_text && message.translated_text !== message.original_text;
+  const isImage = message.attachment_type?.startsWith('image/');
 
   return (
     <div className={`flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"} group`}>
@@ -74,7 +77,9 @@ const MessageBubble = ({
         
         <div className="relative">
           <div
-            className={`rounded-2xl px-4 py-2.5 ${
+            className={`rounded-2xl ${
+              isImage && !message.original_text ? 'p-0 overflow-hidden' : 'px-4 py-2.5'
+            } ${
               isOwn
                 ? "bg-[hsl(var(--message-sent))] text-[hsl(var(--message-sent-foreground))]"
                 : "bg-[hsl(var(--message-received))] text-[hsl(var(--message-received-foreground))]"
@@ -86,7 +91,20 @@ const MessageBubble = ({
                 <p className="truncate">{message.reply_to.original_text}</p>
               </div>
             )}
-            <p className="text-sm leading-relaxed">{displayText}</p>
+            
+            {/* Display attachment */}
+            {message.attachment_url && isImage && (
+              <img 
+                src={message.attachment_url} 
+                alt="Attachment" 
+                className={`max-w-full h-auto max-h-96 object-contain ${message.original_text ? 'mb-2 rounded-lg' : 'rounded-2xl'}`}
+              />
+            )}
+            
+            {/* Display text if present */}
+            {message.original_text && (
+              <p className="text-sm leading-relaxed">{displayText}</p>
+            )}
           </div>
 
           {/* Reaction and Reply buttons - shows on hover */}
