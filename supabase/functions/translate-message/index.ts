@@ -54,12 +54,7 @@ serve(async (req) => {
     // Get all participants in the chat
     const { data: participants, error: participantsError } = await supabase
       .from('chat_participants')
-      .select(`
-        user_id,
-        profiles (
-          preferred_language
-        )
-      `)
+      .select('user_id')
       .eq('chat_id', chatId);
 
     if (participantsError) {
@@ -69,10 +64,27 @@ serve(async (req) => {
 
     console.log('Found participants:', participants.length);
 
+    // Get profiles for all participants
+    const userIds = participants.map(p => p.user_id);
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, preferred_language')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      throw profilesError;
+    }
+
+    // Create a map of user_id to preferred_language
+    const languageMap = new Map(
+      profiles.map(p => [p.id, p.preferred_language])
+    );
+
     // Translate for each participant
     const translations = await Promise.all(
       participants.map(async (participant: any) => {
-        const targetLanguage = participant.profiles.preferred_language;
+        const targetLanguage = languageMap.get(participant.user_id) || 'en';
         
         // Skip translation if same language as source
         if (targetLanguage === sourceLanguage) {
