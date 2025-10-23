@@ -190,6 +190,10 @@ const ChatList = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="default" size="sm" onClick={() => navigate("/compose")}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Chat
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
               <Settings className="w-5 h-5" />
             </Button>
