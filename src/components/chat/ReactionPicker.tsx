@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -7,7 +8,7 @@ import {
 
 interface ReactionPickerProps {
   onReactionSelect: (reaction: string) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const REACTIONS = ["❤️", "👍", "😂", "😮", "😢", "🙏", "👏", "🔥"];
