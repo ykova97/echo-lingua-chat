@@ -119,6 +119,16 @@ const Chat = () => {
               );
           }
         }
+        
+        // Auto-scroll to bottom after messages load
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTo({
+              top: scrollRef.current.scrollHeight,
+              behavior: "smooth",
+            });
+          }
+        }, 100);
       } catch (error) {
         toast({
           title: "Error loading messages",

@@ -48,9 +48,9 @@ const ChatList = () => {
     if (currentUser) {
       loadChats();
       
-      // Subscribe to new messages for real-time updates
+      // Subscribe to new messages and read receipts for real-time updates
       const channel = supabase
-        .channel('chat-list-messages')
+        .channel('chat-list-updates')
         .on(
           'postgres_changes',
           {
@@ -102,6 +102,36 @@ const ChatList = () => {
               const [updatedChat] = updatedChats.splice(chatIndex, 1);
               return [updatedChat, ...updatedChats];
             });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'message_read_receipts',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          async (payload) => {
+            const receipt = payload.new as any;
+            
+            // Get the chat_id for this message
+            const { data: message } = await supabase
+              .from('messages')
+              .select('chat_id')
+              .eq('id', receipt.message_id)
+              .single();
+            
+            if (!message) return;
+            
+            // Decrement unread count for this chat
+            setChats(prev => 
+              prev.map(chat => 
+                chat.id === message.chat_id && chat.unread_count && chat.unread_count > 0
+                  ? { ...chat, unread_count: chat.unread_count - 1 }
+                  : chat
+              )
+            );
           }
         )
         .subscribe();
