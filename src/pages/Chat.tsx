@@ -108,7 +108,8 @@ const Chat = () => {
             .map(m => m.id);
           
           if (messageIds.length > 0) {
-            await supabase
+            console.log('Marking messages as read:', messageIds);
+            const { error } = await supabase
               .from("message_read_receipts")
               .upsert(
                 messageIds.map(id => ({
@@ -117,6 +118,12 @@ const Chat = () => {
                 })),
                 { onConflict: 'message_id,user_id' }
               );
+            
+            if (error) {
+              console.error('Error marking messages as read:', error);
+            } else {
+              console.log('Successfully marked messages as read');
+            }
           }
         }
         

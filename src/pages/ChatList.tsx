@@ -47,6 +47,23 @@ const ChatList = () => {
   useEffect(() => {
     if (currentUser) {
       loadChats();
+    }
+  }, [currentUser]);
+
+  // Reload chats when component comes back into focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if (currentUser) {
+        loadChats();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
       
       // Subscribe to new messages and read receipts for real-time updates
       const channel = supabase
