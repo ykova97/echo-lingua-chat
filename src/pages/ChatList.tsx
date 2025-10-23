@@ -171,6 +171,10 @@ const ChatList = () => {
     if (!chatToDelete) return;
 
     try {
+      // Optimistically remove from UI
+      setChats((prev) => prev.filter((chat) => chat.id !== chatToDelete));
+      setChatToDelete(null);
+
       // Delete all related data first due to foreign key constraints
       // Delete message reactions
       const { data: messages } = await supabase
@@ -216,26 +220,25 @@ const ChatList = () => {
         .eq("chat_id", chatToDelete);
 
       // Delete the chat itself
-      await supabase
+      const { error } = await supabase
         .from("chats")
         .delete()
         .eq("id", chatToDelete);
+
+      if (error) throw error;
 
       toast({
         title: "Chat deleted",
         description: "The conversation has been removed.",
       });
-
-      // Reload chats
-      await loadChats();
     } catch (error: any) {
       toast({
         title: "Error deleting chat",
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setChatToDelete(null);
+      // Reload chats on error to restore the UI
+      await loadChats();
     }
   };
 
