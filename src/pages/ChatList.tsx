@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Plus, LogOut, Settings } from "lucide-react";
+import { MessageCircle, Plus, LogOut, Settings, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 interface Chat {
@@ -24,6 +25,7 @@ const ChatList = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -190,10 +192,6 @@ const ChatList = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => navigate("/compose")}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Chat
-            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
               <Settings className="w-5 h-5" />
             </Button>
@@ -204,8 +202,27 @@ const ChatList = () => {
         </div>
       </header>
 
+      {/* Search Bar */}
+      <div className="max-w-4xl mx-auto px-4 py-3 bg-background">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-secondary/50 border-0 rounded-xl"
+            />
+          </div>
+          <Button size="icon" onClick={() => navigate("/compose")} className="rounded-full">
+            <Plus className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+
       {/* Chat List */}
-      <main className="max-w-4xl mx-auto p-4">
+      <main className="max-w-4xl mx-auto px-4 pb-4">
         {chats.length === 0 ? (
           <div className="text-center py-16 space-y-4">
             <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
@@ -215,7 +232,14 @@ const ChatList = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {chats.map((chat) => (
+            {chats
+              .filter((chat) => {
+                const chatName = getChatName(chat).toLowerCase();
+                const lastMessage = chat.last_message?.text.toLowerCase() || "";
+                const query = searchQuery.toLowerCase();
+                return chatName.includes(query) || lastMessage.includes(query);
+              })
+              .map((chat) => (
               <button
                 key={chat.id}
                 onClick={() => navigate(`/chat/${chat.id}`)}
