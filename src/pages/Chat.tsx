@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MessageBubble from "@/components/chat/MessageBubble";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const PAGE_SIZE = 30;
 
@@ -182,11 +182,11 @@ const Chat = () => {
     return <div className="flex items-center justify-center min-h-screen">Loading chat...</div>;
   }
 
-  // ===== Sticky header + composer layout =====
+  // ===== Fixed header + scrollable messages + fixed input =====
   return (
-    <div className="flex flex-col h-[100dvh] min-h-0 bg-background">
-      {/* Sticky header */}
-      <header className="sticky top-[env(safe-area-inset-top)] z-50 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="flex flex-col h-[100dvh] bg-background">
+      {/* Fixed header */}
+      <header className="flex-none border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="p-4 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")}>
             <ArrowLeft className="h-5 w-5" />
@@ -196,23 +196,24 @@ const Chat = () => {
       </header>
 
       {/* Scrollable messages */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div ref={scrollRef} className="scroll-y-touch overscroll-contain px-4 pt-4 pb-20 space-y-4">
-          {messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              isOwn={message.sender_id === currentUser?.id}
-              showOriginal={showOriginalMap[message.id] || false}
-              currentUserId={currentUser?.id || ""}
-              onToggleOriginal={() => toggleOriginal(message.id)}
-            />
-          ))}
-        </div>
-      </ScrollArea>
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-4 space-y-4"
+      >
+        {messages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            isOwn={message.sender_id === currentUser?.id}
+            showOriginal={showOriginalMap[message.id] || false}
+            currentUserId={currentUser?.id || ""}
+            onToggleOriginal={() => toggleOriginal(message.id)}
+          />
+        ))}
+      </div>
 
-      {/* Sticky input bar */}
-      <div className="sticky bottom-[env(safe-area-inset-bottom)] z-50 border-t bg-background">
+      {/* Fixed input bar */}
+      <div className="flex-none border-t bg-background">
         <div className="p-4">
           <div className="flex gap-2">
             <Input
