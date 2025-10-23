@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Globe, Camera, Mail, Phone, User } from "lucide-react";
+import { BlockedUsers } from "@/components/settings/BlockedUsers";
+import { Separator } from "@/components/ui/separator";
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -343,6 +345,18 @@ const Settings = () => {
           >
             {loading ? "Saving..." : "Save Changes"}
           </Button>
+        </div>
+
+        {/* Blocked Users Section */}
+        <div className="bg-card rounded-2xl shadow-sm p-6 border border-border space-y-4 mt-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Blocked Users</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage users you've blocked
+            </p>
+          </div>
+          <Separator />
+          <BlockedUsers />
         </div>
       </div>
     </div>

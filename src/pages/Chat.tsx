@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Send, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MessageBubble from "@/components/chat/MessageBubble";
+import { ReplyPreview } from "@/components/chat/ReplyPreview";
 
 interface Message {
   id: string;
@@ -19,6 +20,11 @@ interface Message {
   translated_text?: string;
   target_language?: string;
   reactions?: Array<{ reaction: string; user_id: string; user_name?: string; count: number }>;
+  reply_to?: {
+    sender_name?: string;
+    original_text: string;
+  };
+  is_read?: boolean;
 }
 
 const Chat = () => {
@@ -31,6 +37,7 @@ const Chat = () => {
   const [chatInfo, setChatInfo] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -140,7 +147,7 @@ const Chat = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get messages
+      // Get messages with reply data
       const { data: msgs, error } = await supabase
         .from("messages")
         .select(`
@@ -148,6 +155,12 @@ const Chat = () => {
           profiles:sender_id (
             name,
             profile_image
+          ),
+          reply_message:reply_to_id (
+            original_text,
+            profiles:sender_id (
+              name
+            )
           )
         `)
         .eq("chat_id", chatId)
@@ -155,7 +168,7 @@ const Chat = () => {
 
       if (error) throw error;
 
-      // Get translations and reactions for each message
+      // Get translations, reactions, and read receipts for each message
       const messagesWithData = await Promise.all(
         (msgs || []).map(async (msg: any) => {
           // Get translation
@@ -186,6 +199,27 @@ const Chat = () => {
             count: 1
           })) || [];
 
+          // Check if message is read (for sent messages)
+          let isRead = false;
+          if (msg.sender_id === user.id) {
+            const { data: readReceipts } = await supabase
+              .from("message_read_receipts")
+              .select("id")
+              .eq("message_id", msg.id)
+              .neq("user_id", user.id);
+            isRead = (readReceipts?.length || 0) > 0;
+          } else {
+            // Mark as read if not own message
+            await supabase
+              .from("message_read_receipts")
+              .upsert({
+                message_id: msg.id,
+                user_id: user.id,
+              }, {
+                onConflict: "message_id,user_id",
+              });
+          }
+
           return {
             ...msg,
             sender_name: msg.profiles?.name,
@@ -193,6 +227,11 @@ const Chat = () => {
             translated_text: translation?.translated_text,
             target_language: translation?.target_language,
             reactions: formattedReactions,
+            reply_to: msg.reply_message ? {
+              sender_name: (msg.reply_message.profiles as any)?.name,
+              original_text: msg.reply_message.original_text,
+            } : undefined,
+            is_read: isRead,
           };
         })
       );
@@ -219,12 +258,14 @@ const Chat = () => {
           chatId,
           message: newMessage,
           sourceLanguage: currentUser.preferred_language,
+          replyToId: replyingTo?.id,
         },
       });
 
       if (error) throw error;
 
       setNewMessage("");
+      setReplyingTo(null);
     } catch (error: any) {
       toast({
         title: "Error sending message",
@@ -333,36 +374,43 @@ const Chat = () => {
               }))
             }
             onReaction={(reaction) => handleReaction(message.id, reaction)}
+            onReply={() => setReplyingTo(message)}
           />
         ))}
         <div ref={messagesEndRef} />
       </main>
 
       {/* Input - iMessage Style */}
-      <footer className="bg-card border-t border-border p-3 safe-area-bottom">
-        <form onSubmit={sendMessage} className="flex items-end gap-2 max-w-4xl mx-auto">
-          <div className="flex-1 relative flex items-center bg-secondary/50 rounded-[24px] border border-border/50 px-4 py-2 min-h-[40px]">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="iMessage"
-              disabled={loading}
-              className="flex-1 bg-transparent border-none outline-none text-[15px] placeholder:text-muted-foreground/60"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading || !newMessage.trim()}
-            className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
-              newMessage.trim() && !loading
-                ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                : 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
-            }`}
-          >
-            <Send className="w-[18px] h-[18px]" />
-          </button>
-        </form>
+      <footer className="bg-card border-t border-border safe-area-bottom">
+        <ReplyPreview 
+          replyingTo={replyingTo} 
+          onCancel={() => setReplyingTo(null)} 
+        />
+        <div className="p-3">
+          <form onSubmit={sendMessage} className="flex items-end gap-2 max-w-4xl mx-auto">
+            <div className="flex-1 relative flex items-center bg-secondary/50 rounded-[24px] border border-border/50 px-4 py-2 min-h-[40px]">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="iMessage"
+                disabled={loading}
+                className="flex-1 bg-transparent border-none outline-none text-[15px] placeholder:text-muted-foreground/60"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !newMessage.trim()}
+              className={`w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+                newMessage.trim() && !loading
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                  : 'bg-secondary/50 text-muted-foreground cursor-not-allowed'
+              }`}
+            >
+              <Send className="w-[18px] h-[18px]" />
+            </button>
+          </form>
+        </div>
       </footer>
     </div>
   );

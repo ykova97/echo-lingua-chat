@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Globe, Smile } from "lucide-react";
+import { Globe, Smile, Reply } from "lucide-react";
 import { ReactionPicker } from "./ReactionPicker";
 import { MessageReactions } from "./MessageReactions";
 
@@ -15,12 +15,18 @@ interface MessageBubbleProps {
     target_language?: string;
     created_at: string;
     reactions?: Array<{ reaction: string; user_id: string; user_name?: string; count: number }>;
+    reply_to?: {
+      sender_name?: string;
+      original_text: string;
+    };
+    is_read?: boolean;
   };
   isOwn: boolean;
   showOriginal: boolean;
   currentUserId: string;
   onToggleOriginal: () => void;
   onReaction?: (reaction: string) => void;
+  onReply?: () => void;
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -42,7 +48,8 @@ const MessageBubble = ({
   showOriginal, 
   currentUserId,
   onToggleOriginal,
-  onReaction
+  onReaction,
+  onReply
 }: MessageBubbleProps) => {
   const displayText = showOriginal ? message.original_text : (message.translated_text || message.original_text);
   const hasTranslation = !isOwn && message.translated_text && message.translated_text !== message.original_text;
@@ -73,16 +80,30 @@ const MessageBubble = ({
                 : "bg-[hsl(var(--message-received))] text-[hsl(var(--message-received-foreground))]"
             }`}
           >
+            {message.reply_to && (
+              <div className="mb-2 pl-3 border-l-2 border-current/30 text-xs opacity-70">
+                <p className="font-medium">{message.reply_to.sender_name}</p>
+                <p className="truncate">{message.reply_to.original_text}</p>
+              </div>
+            )}
             <p className="text-sm leading-relaxed">{displayText}</p>
           </div>
 
-          {/* Reaction button - shows on hover */}
-          <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 transition-opacity -ml-2 mr-2`}>
+          {/* Reaction and Reply buttons - shows on hover */}
+          <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ${isOwn ? '-ml-2' : 'mr-2'}`}>
             <ReactionPicker onReactionSelect={(reaction) => onReaction?.(reaction)}>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full bg-background shadow-sm">
                 <Smile className="h-4 w-4" />
               </Button>
             </ReactionPicker>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 w-7 p-0 rounded-full bg-background shadow-sm"
+              onClick={onReply}
+            >
+              <Reply className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Show reactions */}
@@ -102,6 +123,10 @@ const MessageBubble = ({
               minute: "2-digit",
             })}
           </span>
+          
+          {isOwn && message.is_read && (
+            <span className="text-xs text-muted-foreground">Read</span>
+          )}
           
           {hasTranslation && (
             <Button

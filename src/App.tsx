@@ -9,6 +9,7 @@ import ChatList from "./pages/ChatList";
 import Chat from "./pages/Chat";
 import ComposeNewMessage from "./pages/ComposeNewMessage";
 import Settings from "./pages/Settings";
+import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/chat/:chatId" element={<Chat />} />
           <Route path="/compose" element={<ComposeNewMessage />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/admin" element={<AdminPanel />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
