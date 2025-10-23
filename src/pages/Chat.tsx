@@ -104,7 +104,7 @@ const Chat = () => {
         // Mark all unread messages as read
         if (initialMessages.length > 0) {
           const unreadMessageIds = initialMessages
-            .filter(m => m.sender_id !== currentUser.id && !m.translated_text)
+            .filter(m => m.sender_id !== currentUser.id)
             .map(m => m.id);
           
           if (unreadMessageIds.length > 0) {
