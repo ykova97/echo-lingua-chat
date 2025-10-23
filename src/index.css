@@ -121,4 +121,20 @@
   .safe-area-inset-right {
     padding-right: env(safe-area-inset-right);
   }
+  /* Ensure the app actually fills the device viewport on iOS */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  /* Smooth iOS scrolling for the scroll area */
+  .scroll-y-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Optional: reduce pull-to-bounce */
+  .overscroll-contain {
+    overscroll-behavior-y: contain;
+  }
 }
