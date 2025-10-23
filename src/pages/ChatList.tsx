@@ -208,13 +208,6 @@ const ChatList = () => {
               <MessageCircle className="w-8 h-8 text-muted-foreground" />
             </div>
             <h2 className="text-2xl font-semibold">No conversations yet</h2>
-            <p className="text-muted-foreground">
-              Start a new chat to break language barriers
-            </p>
-            <Button onClick={() => navigate("/compose")} size="lg" className="mt-4">
-              <Plus className="w-5 h-5 mr-2" />
-              Start Chatting
-            </Button>
           </div>
         ) : (
           <div className="space-y-2">
@@ -250,13 +243,6 @@ const ChatList = () => {
         )}
       </main>
 
-      {/* Floating Action Button */}
-      <button
-        onClick={() => navigate("/compose")}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
     </div>
   );
 };
