@@ -34,6 +34,7 @@ const Settings = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [language, setLanguage] = useState("en");
+  const [handle, setHandle] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ const Settings = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("name, preferred_language, profile_image")
+        .select("name, preferred_language, profile_image, handle")
         .eq("id", user.id)
         .single();
 
@@ -58,6 +59,7 @@ const Settings = () => {
         setName(profile.name);
         setLanguage(profile.preferred_language);
         setProfileImage(profile.profile_image);
+        setHandle(profile.handle || "");
       }
     };
 
@@ -140,7 +142,8 @@ const Settings = () => {
         .from("profiles")
         .update({ 
           name,
-          preferred_language: language 
+          preferred_language: language,
+          handle: handle.trim() || null
         })
         .eq("id", userId);
 
@@ -282,6 +285,28 @@ const Settings = () => {
             />
             <p className="text-xs text-muted-foreground">
               Include country code. Changing will require verification
+            </p>
+          </div>
+
+          {/* Handle */}
+          <div className="space-y-2">
+            <Label htmlFor="handle" className="text-base">
+              Handle (@username)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-lg">@</span>
+              <Input
+                id="handle"
+                type="text"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                placeholder="username"
+                className="pl-9 h-12"
+                maxLength={20}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your unique handle. Letters, numbers, and underscores only.
             </p>
           </div>
 

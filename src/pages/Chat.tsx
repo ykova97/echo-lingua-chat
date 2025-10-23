@@ -18,6 +18,7 @@ interface Message {
   sender_image?: string;
   translated_text?: string;
   target_language?: string;
+  reactions?: Array<{ reaction: string; user_id: string; user_name?: string; count: number }>;
 }
 
 const Chat = () => {
@@ -154,9 +155,10 @@ const Chat = () => {
 
       if (error) throw error;
 
-      // Get translations
-      const messagesWithTranslations = await Promise.all(
+      // Get translations and reactions for each message
+      const messagesWithData = await Promise.all(
         (msgs || []).map(async (msg: any) => {
+          // Get translation
           const { data: translation } = await supabase
             .from("message_translations")
             .select("translated_text, target_language")
@@ -164,17 +166,38 @@ const Chat = () => {
             .eq("user_id", user.id)
             .single();
 
+          // Get reactions
+          const { data: reactions } = await supabase
+            .from("message_reactions")
+            .select(`
+              reaction,
+              user_id,
+              profiles:user_id (
+                name
+              )
+            `)
+            .eq("message_id", msg.id);
+
+          // Format reactions
+          const formattedReactions = reactions?.map(r => ({
+            reaction: r.reaction,
+            user_id: r.user_id,
+            user_name: (r.profiles as any)?.name,
+            count: 1
+          })) || [];
+
           return {
             ...msg,
             sender_name: msg.profiles?.name,
             sender_image: msg.profiles?.profile_image,
             translated_text: translation?.translated_text,
             target_language: translation?.target_language,
+            reactions: formattedReactions,
           };
         })
       );
 
-      setMessages(messagesWithTranslations);
+      setMessages(messagesWithData);
     } catch (error: any) {
       toast({
         title: "Error loading messages",
@@ -210,6 +233,47 @@ const Chat = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReaction = async (messageId: string, reaction: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // Check if user already reacted with this emoji
+      const { data: existing } = await supabase
+        .from("message_reactions")
+        .select("id")
+        .eq("message_id", messageId)
+        .eq("user_id", currentUser.id)
+        .eq("reaction", reaction)
+        .single();
+
+      if (existing) {
+        // Remove reaction
+        await supabase
+          .from("message_reactions")
+          .delete()
+          .eq("id", existing.id);
+      } else {
+        // Add reaction
+        await supabase
+          .from("message_reactions")
+          .insert({
+            message_id: messageId,
+            user_id: currentUser.id,
+            reaction,
+          });
+      }
+      
+      // Reload messages to show updated reactions
+      await loadMessages();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -268,6 +332,7 @@ const Chat = () => {
                 [message.id]: !prev[message.id],
               }))
             }
+            onReaction={(reaction) => handleReaction(message.id, reaction)}
           />
         ))}
         <div ref={messagesEndRef} />

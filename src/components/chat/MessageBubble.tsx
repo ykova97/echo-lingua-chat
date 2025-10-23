@@ -1,6 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Globe } from "lucide-react";
+import { Globe, Smile } from "lucide-react";
+import { ReactionPicker } from "./ReactionPicker";
+import { MessageReactions } from "./MessageReactions";
 
 interface MessageBubbleProps {
   message: {
@@ -12,15 +14,13 @@ interface MessageBubbleProps {
     source_language: string;
     target_language?: string;
     created_at: string;
+    reactions?: Array<{ reaction: string; user_id: string; user_name?: string; count: number }>;
   };
   isOwn: boolean;
   showOriginal: boolean;
   currentUserId: string;
   onToggleOriginal: () => void;
-  onReply?: () => void;
   onReaction?: (reaction: string) => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -41,13 +41,14 @@ const MessageBubble = ({
   isOwn, 
   showOriginal, 
   currentUserId,
-  onToggleOriginal
+  onToggleOriginal,
+  onReaction
 }: MessageBubbleProps) => {
   const displayText = showOriginal ? message.original_text : (message.translated_text || message.original_text);
   const hasTranslation = !isOwn && message.translated_text && message.translated_text !== message.original_text;
 
   return (
-    <div className={`flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+    <div className={`flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"} group`}>
       {!isOwn && (
         <Avatar className="w-8 h-8">
           <AvatarImage src={message.sender_image} />
@@ -64,14 +65,34 @@ const MessageBubble = ({
           </span>
         )}
         
-        <div
-          className={`rounded-2xl px-4 py-2.5 ${
-            isOwn
-              ? "bg-[hsl(var(--message-sent))] text-[hsl(var(--message-sent-foreground))]"
-              : "bg-[hsl(var(--message-received))] text-[hsl(var(--message-received-foreground))]"
-          }`}
-        >
-          <p className="text-sm leading-relaxed">{displayText}</p>
+        <div className="relative">
+          <div
+            className={`rounded-2xl px-4 py-2.5 ${
+              isOwn
+                ? "bg-[hsl(var(--message-sent))] text-[hsl(var(--message-sent-foreground))]"
+                : "bg-[hsl(var(--message-received))] text-[hsl(var(--message-received-foreground))]"
+            }`}
+          >
+            <p className="text-sm leading-relaxed">{displayText}</p>
+          </div>
+
+          {/* Reaction button - shows on hover */}
+          <div className={`absolute top-0 ${isOwn ? 'left-0 -translate-x-full' : 'right-0 translate-x-full'} opacity-0 group-hover:opacity-100 transition-opacity -ml-2 mr-2`}>
+            <ReactionPicker onReactionSelect={(reaction) => onReaction?.(reaction)}>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full bg-background shadow-sm">
+                <Smile className="h-4 w-4" />
+              </Button>
+            </ReactionPicker>
+          </div>
+
+          {/* Show reactions */}
+          {message.reactions && message.reactions.length > 0 && (
+            <MessageReactions 
+              reactions={message.reactions}
+              currentUserId={currentUserId}
+              onReactionClick={(reaction) => onReaction?.(reaction)}
+            />
+          )}
         </div>
 
         <div className="flex items-center gap-2 mt-1 px-2">
