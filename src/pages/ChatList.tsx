@@ -485,7 +485,13 @@ const ChatList = () => {
                       : undefined
                   }
                   unreadCount={chat.unread_count}
-                  onChatClick={() => navigate(`/chat/${chat.id}`)}
+                  onChatClick={() => {
+                    // Clear unread count immediately in UI
+                    setChats(prev => 
+                      prev.map(c => c.id === chat.id ? { ...c, unread_count: 0 } : c)
+                    );
+                    navigate(`/chat/${chat.id}`);
+                  }}
                   onDelete={(id) => setChatToDelete(id)}
                 />
               ))}
