@@ -6,6 +6,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageCircle, Plus, LogOut, Settings, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { SwipeableChatItem } from "@/components/chat/SwipeableChatItem";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Chat {
   id: string;
@@ -26,6 +37,7 @@ const ChatList = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -155,13 +167,76 @@ const ChatList = () => {
     return otherParticipants[0]?.profiles?.profile_image;
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const handleDeleteChat = async () => {
+    if (!chatToDelete) return;
+
+    try {
+      // Delete all related data first due to foreign key constraints
+      // Delete message reactions
+      const { data: messages } = await supabase
+        .from("messages")
+        .select("id")
+        .eq("chat_id", chatToDelete);
+
+      if (messages) {
+        for (const msg of messages) {
+          await supabase
+            .from("message_reactions")
+            .delete()
+            .eq("message_id", msg.id);
+          
+          await supabase
+            .from("message_read_receipts")
+            .delete()
+            .eq("message_id", msg.id);
+          
+          await supabase
+            .from("message_translations")
+            .delete()
+            .eq("message_id", msg.id);
+        }
+      }
+
+      // Delete messages
+      await supabase
+        .from("messages")
+        .delete()
+        .eq("chat_id", chatToDelete);
+
+      // Delete chat participants
+      await supabase
+        .from("chat_participants")
+        .delete()
+        .eq("chat_id", chatToDelete);
+
+      // Delete muted chats
+      await supabase
+        .from("muted_chats")
+        .delete()
+        .eq("chat_id", chatToDelete);
+
+      // Delete the chat itself
+      await supabase
+        .from("chats")
+        .delete()
+        .eq("id", chatToDelete);
+
+      toast({
+        title: "Chat deleted",
+        description: "The conversation has been removed.",
+      });
+
+      // Reload chats
+      await loadChats();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting chat",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setChatToDelete(null);
+    }
   };
 
   if (loading) {
@@ -240,37 +315,48 @@ const ChatList = () => {
                 return chatName.includes(query) || lastMessage.includes(query);
               })
               .map((chat) => (
-              <button
-                key={chat.id}
-                onClick={() => navigate(`/chat/${chat.id}`)}
-                className="w-full bg-card hover:bg-secondary/50 rounded-2xl p-4 border border-border transition-colors duration-200 flex items-center gap-4"
-              >
-                <Avatar className="w-14 h-14">
-                  <AvatarImage src={getChatAvatar(chat)} />
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getInitials(getChatName(chat))}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 text-left">
-                  <h3 className="font-semibold text-foreground">{getChatName(chat)}</h3>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {chat.last_message?.text || "No messages yet"}
-                  </p>
-                </div>
-                {chat.last_message && (
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(chat.last_message.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                )}
-              </button>
-            ))}
+                <SwipeableChatItem
+                  key={chat.id}
+                  chatId={chat.id}
+                  chatName={getChatName(chat)}
+                  chatAvatar={getChatAvatar(chat)}
+                  lastMessage={chat.last_message?.text || "No messages yet"}
+                  lastMessageTime={
+                    chat.last_message
+                      ? new Date(chat.last_message.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : undefined
+                  }
+                  onChatClick={() => navigate(`/chat/${chat.id}`)}
+                  onDelete={(id) => setChatToDelete(id)}
+                />
+              ))}
           </div>
         )}
       </main>
 
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!chatToDelete} onOpenChange={() => setChatToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this conversation and all its messages. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteChat}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
