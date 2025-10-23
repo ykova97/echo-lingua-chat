@@ -97,25 +97,33 @@ const ChatList = () => {
   }, [navigate]);
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/auth");
+        return;
+      }
+      
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (profile) {
+        setCurrentUser({ ...session.user, ...profile });
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
     }
-    
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-    
-    setCurrentUser({ ...user, ...profile });
   };
 
   const loadChats = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const user = session.user;
 
       // Get user's chats
       const { data: chatParticipants, error } = await supabase

@@ -62,6 +62,8 @@ const Chat = () => {
           filter: `chat_id=eq.${chatId}`,
         },
         async (payload) => {
+          if (!currentUser?.id) return;
+          
           const newMsg = payload.new as any;
           
           // Get sender info
@@ -71,9 +73,7 @@ const Chat = () => {
             .eq("id", newMsg.sender_id)
             .maybeSingle();
 
-          // Get translation for current user - only if currentUser exists
-          if (!currentUser?.id) return;
-          
+          // Get translation for current user
           const { data: translation } = await supabase
             .from("message_translations")
             .select("translated_text, target_language")
@@ -105,19 +105,25 @@ const Chat = () => {
   }, [messages]);
 
   const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profile) {
+        setCurrentUser({ ...session.user, ...profile });
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
     }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    setCurrentUser({ ...user, ...profile });
   };
 
   const loadChat = async () => {
@@ -151,8 +157,10 @@ const Chat = () => {
 
   const loadMessages = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const user = session.user;
 
       // Get messages first
       const { data: msgs, error } = await supabase
