@@ -147,22 +147,10 @@ const Chat = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get messages with reply data
+      // Get messages first
       const { data: msgs, error } = await supabase
         .from("messages")
-        .select(`
-          *,
-          profiles:sender_id (
-            name,
-            profile_image
-          ),
-          reply_message:reply_to_id (
-            original_text,
-            profiles:sender_id (
-              name
-            )
-          )
-        `)
+        .select("*")
         .eq("chat_id", chatId)
         .order("created_at", { ascending: true });
 
@@ -171,33 +159,67 @@ const Chat = () => {
       // Get translations, reactions, and read receipts for each message
       const messagesWithData = await Promise.all(
         (msgs || []).map(async (msg: any) => {
+          // Get sender profile
+          const { data: senderProfile } = await supabase
+            .from("profiles")
+            .select("name, profile_image")
+            .eq("id", msg.sender_id)
+            .maybeSingle();
+
+          // Get reply message if exists
+          let replyData = undefined;
+          if (msg.reply_to_id) {
+            const { data: replyMsg } = await supabase
+              .from("messages")
+              .select("original_text, sender_id")
+              .eq("id", msg.reply_to_id)
+              .maybeSingle();
+            
+            if (replyMsg) {
+              const { data: replySender } = await supabase
+                .from("profiles")
+                .select("name")
+                .eq("id", replyMsg.sender_id)
+                .maybeSingle();
+              
+              replyData = {
+                sender_name: replySender?.name,
+                original_text: replyMsg.original_text
+              };
+            }
+          }
+
           // Get translation
           const { data: translation } = await supabase
             .from("message_translations")
             .select("translated_text, target_language")
             .eq("message_id", msg.id)
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
 
           // Get reactions
           const { data: reactions } = await supabase
             .from("message_reactions")
-            .select(`
-              reaction,
-              user_id,
-              profiles:user_id (
-                name
-              )
-            `)
+            .select("reaction, user_id")
             .eq("message_id", msg.id);
 
-          // Format reactions
-          const formattedReactions = reactions?.map(r => ({
-            reaction: r.reaction,
-            user_id: r.user_id,
-            user_name: (r.profiles as any)?.name,
-            count: 1
-          })) || [];
+          // Get user names for reactions
+          const reactionsWithNames = await Promise.all(
+            (reactions || []).map(async (r) => {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("name")
+                .eq("id", r.user_id)
+                .maybeSingle();
+              
+              return {
+                reaction: r.reaction,
+                user_id: r.user_id,
+                user_name: profile?.name,
+                count: 1
+              };
+            })
+          );
 
           // Check if message is read (for sent messages)
           let isRead = false;
@@ -222,15 +244,12 @@ const Chat = () => {
 
           return {
             ...msg,
-            sender_name: msg.profiles?.name,
-            sender_image: msg.profiles?.profile_image,
+            sender_name: senderProfile?.name,
+            sender_image: senderProfile?.profile_image,
             translated_text: translation?.translated_text,
             target_language: translation?.target_language,
-            reactions: formattedReactions,
-            reply_to: msg.reply_message ? {
-              sender_name: (msg.reply_message.profiles as any)?.name,
-              original_text: msg.reply_message.original_text,
-            } : undefined,
+            reactions: reactionsWithNames,
+            reply_to: replyData,
             is_read: isRead,
           };
         })
