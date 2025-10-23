@@ -41,7 +41,7 @@ export const ContactSuggestions = ({
                 {contact.name || "Unknown User"}
               </div>
               <div className="text-[13px] text-muted-foreground truncate">
-                {contact.phone || contact.preferred_language}
+                {contact.email || contact.phone || contact.preferred_language}
               </div>
             </div>
           </button>

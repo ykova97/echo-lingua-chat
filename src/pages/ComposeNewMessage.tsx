@@ -62,7 +62,7 @@ const ComposeNewMessage = () => {
     const { data: profiles } = await supabase
       .from("profiles")
       .select("*")
-      .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
+      .or(`name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
       .limit(10);
 
     setSuggestions(profiles || []);
