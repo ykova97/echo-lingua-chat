@@ -48,9 +48,9 @@ const ChatList = () => {
     if (currentUser) {
       loadChats();
       
-      // Subscribe to new messages for all chats
+      // Subscribe to new messages for real-time updates
       const channel = supabase
-        .channel('new-messages')
+        .channel('chat-list-messages')
         .on(
           'postgres_changes',
           {
@@ -62,15 +62,46 @@ const ChatList = () => {
             const newMsg = payload.new as any;
             
             // Check if this message is in one of the user's chats
-            const chatIndex = chats.findIndex(c => c.id === newMsg.chat_id);
-            if (chatIndex !== -1 && newMsg.sender_id !== currentUser.id) {
-              // Increment unread count for this chat
-              setChats(prev => prev.map(chat => 
-                chat.id === newMsg.chat_id 
-                  ? { ...chat, unread_count: (chat.unread_count || 0) + 1 }
-                  : chat
-              ));
-            }
+            const { data: isParticipant } = await supabase
+              .from('chat_participants')
+              .select('chat_id')
+              .eq('chat_id', newMsg.chat_id)
+              .eq('user_id', currentUser.id)
+              .maybeSingle();
+            
+            if (!isParticipant) return;
+            
+            // Update the chat list
+            setChats(prev => {
+              const chatIndex = prev.findIndex(c => c.id === newMsg.chat_id);
+              
+              if (chatIndex === -1) {
+                // New chat - reload all chats
+                loadChats();
+                return prev;
+              }
+              
+              // Update existing chat
+              const updatedChats = [...prev];
+              const chat = updatedChats[chatIndex];
+              
+              // Update last message
+              updatedChats[chatIndex] = {
+                ...chat,
+                last_message: {
+                  text: newMsg.original_text,
+                  created_at: newMsg.created_at,
+                },
+                // Increment unread count if message is from someone else
+                unread_count: newMsg.sender_id !== currentUser.id 
+                  ? (chat.unread_count || 0) + 1 
+                  : chat.unread_count || 0,
+              };
+              
+              // Move this chat to the top of the list
+              const [updatedChat] = updatedChats.splice(chatIndex, 1);
+              return [updatedChat, ...updatedChats];
+            });
           }
         )
         .subscribe();
@@ -79,7 +110,7 @@ const ChatList = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [currentUser, chats]);
+  }, [currentUser]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
