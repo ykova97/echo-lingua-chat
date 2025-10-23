@@ -112,16 +112,24 @@ const ComposeNewMessage = () => {
     if (recipients.length === 0) return;
 
     try {
+      console.log("Starting chat creation with recipients:", recipients);
+      
       // Create or find existing chat
       const participantIds = [currentUser.id, ...recipients.map(r => r.contact_id)];
+      console.log("Participant IDs:", participantIds);
       
       // Check for existing chat with same participants
-      const { data: existingChats } = await supabase
+      const { data: existingChats, error: fetchError } = await supabase
         .from("chats")
         .select(`
           *,
           chat_participants!inner(user_id)
         `);
+
+      if (fetchError) {
+        console.error("Error fetching chats:", fetchError);
+        throw fetchError;
+      }
 
       let chatId = null;
 
@@ -133,8 +141,10 @@ const ComposeNewMessage = () => {
       });
 
       if (matchingChat) {
+        console.log("Found existing chat:", matchingChat.id);
         chatId = matchingChat.id;
       } else {
+        console.log("Creating new chat...");
         // Create new chat
         const { data: newChat, error: chatError } = await supabase
           .from("chats")
@@ -146,10 +156,16 @@ const ComposeNewMessage = () => {
           .select()
           .single();
 
-        if (chatError) throw chatError;
+        if (chatError) {
+          console.error("Error creating chat:", chatError);
+          throw chatError;
+        }
+        
+        console.log("Chat created:", newChat);
         chatId = newChat.id;
 
         // Add participants
+        console.log("Adding participants...");
         const participantInserts = participantIds.map(userId => ({
           chat_id: chatId,
           user_id: userId,
@@ -159,11 +175,16 @@ const ComposeNewMessage = () => {
           .from("chat_participants")
           .insert(participantInserts);
 
-        if (participantError) throw participantError;
+        if (participantError) {
+          console.error("Error adding participants:", participantError);
+          throw participantError;
+        }
+        console.log("Participants added successfully");
       }
 
       // Send initial message if provided
       if (message.trim() && chatId) {
+        console.log("Sending initial message...");
         const { error: messageError } = await supabase
           .from("messages")
           .insert({
@@ -173,16 +194,21 @@ const ComposeNewMessage = () => {
             source_language: currentUser.preferred_language || "en",
           });
 
-        if (messageError) throw messageError;
+        if (messageError) {
+          console.error("Error sending message:", messageError);
+          throw messageError;
+        }
+        console.log("Message sent successfully");
       }
 
       // Navigate to chat
+      console.log("Navigating to chat:", chatId);
       navigate(`/chat/${chatId}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating chat:", error);
       toast({
         title: "Error",
-        description: "Failed to create chat. Please try again.",
+        description: error.message || "Failed to create chat. Please try again.",
         variant: "destructive",
       });
     }
