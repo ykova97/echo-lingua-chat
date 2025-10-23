@@ -1,4 +1,4 @@
-import { useState, useRef, TouchEvent } from "react";
+import { useState, useRef, TouchEvent, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -12,6 +12,10 @@ interface SwipeableChatItemProps {
   onDelete: (chatId: string) => void;
 }
 
+const SWIPE_THRESHOLD = 60;
+const DELETE_BUTTON_WIDTH = 80;
+const MAX_SWIPE = 100;
+
 export const SwipeableChatItem = ({
   chatId,
   chatName,
@@ -24,31 +28,86 @@ export const SwipeableChatItem = ({
   const [translateX, setTranslateX] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const startX = useRef(0);
+  const startY = useRef(0);
   const currentX = useRef(0);
+  const lastTime = useRef(0);
+  const velocity = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset swipe when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: Event) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        if (translateX !== 0) {
+          setTranslateX(0);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [translateX]);
 
   const handleTouchStart = (e: TouchEvent) => {
     startX.current = e.touches[0].clientX;
-    setIsSwiping(true);
+    startY.current = e.touches[0].clientY;
+    currentX.current = startX.current;
+    lastTime.current = Date.now();
+    velocity.current = 0;
+    setIsSwiping(false);
   };
 
   const handleTouchMove = (e: TouchEvent) => {
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - startX.current;
+    const deltaY = touch.clientY - startY.current;
+    
+    // Determine if this is a horizontal swipe
+    if (!isSwiping && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
+      setIsSwiping(true);
+    }
+    
     if (!isSwiping) return;
     
-    currentX.current = e.touches[0].clientX;
-    const diff = currentX.current - startX.current;
+    // Prevent vertical scrolling while swiping
+    e.preventDefault();
     
-    // Only allow left swipe (negative values)
-    if (diff < 0) {
-      setTranslateX(Math.max(diff, -100)); // Limit to -100px
+    // Calculate velocity
+    const now = Date.now();
+    const timeDelta = now - lastTime.current;
+    if (timeDelta > 0) {
+      velocity.current = (touch.clientX - currentX.current) / timeDelta;
+    }
+    
+    currentX.current = touch.clientX;
+    lastTime.current = now;
+    
+    // Only allow left swipe (negative values) with resistance
+    if (deltaX < 0) {
+      const resistance = 1 - Math.abs(deltaX) / (MAX_SWIPE * 2);
+      const adjustedDelta = deltaX * Math.max(resistance, 0.3);
+      setTranslateX(Math.max(adjustedDelta, -MAX_SWIPE));
+    } else if (translateX < 0) {
+      // Allow closing by swiping right
+      setTranslateX(Math.min(0, translateX + deltaX));
     }
   };
 
   const handleTouchEnd = () => {
+    if (!isSwiping) return;
+    
     setIsSwiping(false);
     
-    // If swiped more than 50px, keep it open at -80px, otherwise close it
-    if (translateX < -50) {
-      setTranslateX(-80);
+    // Use velocity to determine final state
+    const shouldOpen = translateX < -SWIPE_THRESHOLD || velocity.current < -0.5;
+    
+    if (shouldOpen) {
+      setTranslateX(-DELETE_BUTTON_WIDTH);
     } else {
       setTranslateX(0);
     }
@@ -68,28 +127,35 @@ export const SwipeableChatItem = ({
       .slice(0, 2);
   };
 
+  const handleChatClick = () => {
+    if (Math.abs(translateX) < 5) {
+      onChatClick();
+    }
+  };
+
   return (
-    <div className="relative overflow-hidden rounded-2xl">
+    <div ref={containerRef} className="relative overflow-hidden rounded-2xl touch-pan-y">
       {/* Delete Button Background */}
-      <div className="absolute right-0 top-0 bottom-0 w-20 bg-destructive flex items-center justify-center">
+      <div className="absolute right-0 top-0 bottom-0 w-20 bg-destructive rounded-2xl flex items-center justify-center">
         <button
           onClick={handleDelete}
-          className="w-full h-full flex items-center justify-center"
+          className="w-full h-full flex items-center justify-center touch-manipulation"
+          aria-label="Delete chat"
         >
           <Trash2 className="w-5 h-5 text-destructive-foreground" />
         </button>
       </div>
 
       {/* Chat Item */}
-      <button
-        onClick={onChatClick}
+      <div
+        onClick={handleChatClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="w-full bg-card hover:bg-secondary/50 rounded-2xl p-4 border border-border transition-all duration-200 flex items-center gap-4 relative"
+        className="w-full bg-card hover:active:bg-secondary/50 rounded-2xl p-4 border border-border flex items-center gap-4 relative cursor-pointer touch-manipulation select-none"
         style={{
           transform: `translateX(${translateX}px)`,
-          transition: isSwiping ? 'none' : 'transform 0.3s ease-out',
+          transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         <Avatar className="w-14 h-14">
@@ -109,7 +175,7 @@ export const SwipeableChatItem = ({
             {lastMessageTime}
           </span>
         )}
-      </button>
+      </div>
     </div>
   );
 };
