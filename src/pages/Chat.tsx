@@ -101,28 +101,39 @@ const Chat = () => {
         const { messages: initialMessages } = await loadMessagesPage();
         setMessages(initialMessages);
         
-        // Mark all messages as read
+        // Mark all unread messages as read
         if (initialMessages.length > 0) {
-          const messageIds = initialMessages
-            .filter(m => m.sender_id !== currentUser.id)
+          const unreadMessageIds = initialMessages
+            .filter(m => m.sender_id !== currentUser.id && !m.translated_text)
             .map(m => m.id);
           
-          if (messageIds.length > 0) {
-            console.log('Marking messages as read:', messageIds);
-            const { error } = await supabase
+          if (unreadMessageIds.length > 0) {
+            // Check which messages don't have read receipts yet
+            const { data: existing } = await supabase
               .from("message_read_receipts")
-              .upsert(
-                messageIds.map(id => ({
-                  message_id: id,
-                  user_id: currentUser.id
-                })),
-                { onConflict: 'message_id,user_id' }
-              );
+              .select("message_id")
+              .eq("user_id", currentUser.id)
+              .in("message_id", unreadMessageIds);
             
-            if (error) {
-              console.error('Error marking messages as read:', error);
-            } else {
-              console.log('Successfully marked messages as read');
+            const existingIds = new Set((existing || []).map(r => r.message_id));
+            const toInsert = unreadMessageIds.filter(id => !existingIds.has(id));
+            
+            if (toInsert.length > 0) {
+              console.log('Marking messages as read:', toInsert);
+              const { error } = await supabase
+                .from("message_read_receipts")
+                .insert(
+                  toInsert.map(id => ({
+                    message_id: id,
+                    user_id: currentUser.id
+                  }))
+                );
+              
+              if (error) {
+                console.error('Error marking messages as read:', error);
+              } else {
+                console.log('Successfully marked messages as read');
+              }
             }
           }
         }
@@ -205,12 +216,22 @@ const Chat = () => {
           
           // Mark as read if from someone else
           if (newMsg.sender_id !== currentUser.id) {
-            await supabase
+            // Check if already read
+            const { data: existing } = await supabase
               .from("message_read_receipts")
-              .upsert({
-                message_id: newMsg.id,
-                user_id: currentUser.id
-              });
+              .select("id")
+              .eq("message_id", newMsg.id)
+              .eq("user_id", currentUser.id)
+              .maybeSingle();
+            
+            if (!existing) {
+              await supabase
+                .from("message_read_receipts")
+                .insert({
+                  message_id: newMsg.id,
+                  user_id: currentUser.id
+                });
+            }
           }
           
           // Auto-scroll to bottom

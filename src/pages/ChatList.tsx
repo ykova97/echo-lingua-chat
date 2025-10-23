@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +33,7 @@ interface Chat {
 
 const ChatList = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,17 +51,12 @@ const ChatList = () => {
     }
   }, [currentUser]);
 
-  // Reload chats when component comes back into focus
+  // Reload chats when navigating to this page
   useEffect(() => {
-    const handleFocus = () => {
-      if (currentUser) {
-        loadChats();
-      }
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [currentUser]);
+    if (currentUser) {
+      loadChats();
+    }
+  }, [location.pathname, currentUser]);
 
   useEffect(() => {
     if (currentUser) {
