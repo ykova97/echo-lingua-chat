@@ -40,10 +40,10 @@ export const MessageReactions = ({ reactions, currentUserId, onReactionClick }: 
   }, [] as Array<{ reaction: string; count: number; users: Array<{ id: string; name?: string }>; hasCurrentUser: boolean }>);
 
   return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {groupedReactions.map(({ reaction, count, users, hasCurrentUser }) => (
-        <TooltipProvider key={reaction}>
-          <Tooltip>
+    <TooltipProvider>
+      <div className="flex flex-wrap gap-1 mt-1">
+        {groupedReactions.map(({ reaction, count, users, hasCurrentUser }) => (
+          <Tooltip key={reaction}>
             <TooltipTrigger asChild>
               <button
                 onClick={() => onReactionClick(reaction)}
@@ -59,14 +59,14 @@ export const MessageReactions = ({ reactions, currentUserId, onReactionClick }: 
             </TooltipTrigger>
             <TooltipContent>
               <div className="text-xs">
-                {users.map((u, i) => (
+                {users.map((u) => (
                   <div key={u.id}>{u.name || 'User'}</div>
                 ))}
               </div>
             </TooltipContent>
           </Tooltip>
-        </TooltipProvider>
-      ))}
-    </div>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 };
