@@ -141,6 +141,7 @@ const ComposeNewMessage = () => {
           .insert({
             type: participantIds.length > 2 ? "group" : "direct",
             name: participantIds.length > 2 ? recipients.map(r => r.display_name).join(", ") : null,
+            created_by: currentUser.id,
           })
           .select()
           .single();
