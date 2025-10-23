@@ -111,22 +111,35 @@ const ComposeNewMessage = () => {
   const handleCreateChat = async (message: string) => {
     if (recipients.length === 0) return;
     
-    // Get the authenticated user ID directly
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user || !currentUser) {
-      toast({
-        title: "Error",
-        description: "User not loaded. Please refresh the page.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
+      // Get the authenticated user ID directly
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      console.log("Auth check:", { user: user?.id, authError });
+      
+      if (authError || !user) {
+        console.error("Auth error:", authError);
+        toast({
+          title: "Authentication Error",
+          description: "Please sign in again.",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+      
+      if (!currentUser) {
+        toast({
+          title: "Error",
+          description: "User profile not loaded. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       console.log("Starting chat creation with recipients:", recipients);
-      console.log("Current user:", currentUser);
-      console.log("Auth user ID:", user.id);
+      console.log("Current user profile:", currentUser);
+      console.log("Authenticated user ID:", user.id);
       
       // Create or find existing chat - use auth user ID
       const participantIds = [user.id, ...recipients.map(r => r.contact_id)];
@@ -158,7 +171,12 @@ const ComposeNewMessage = () => {
         console.log("Found existing chat:", matchingChat.id);
         chatId = matchingChat.id;
       } else {
-        console.log("Creating new chat...");
+        console.log("Creating new chat with data:", {
+          type: participantIds.length > 2 ? "group" : "direct",
+          name: participantIds.length > 2 ? recipients.map(r => r.display_name).join(", ") : null,
+          created_by: user.id,
+        });
+        
         // Create new chat - use auth user ID
         const { data: newChat, error: chatError } = await supabase
           .from("chats")
@@ -172,10 +190,11 @@ const ComposeNewMessage = () => {
 
         if (chatError) {
           console.error("Error creating chat:", chatError);
+          console.error("Chat error details:", JSON.stringify(chatError, null, 2));
           throw chatError;
         }
         
-        console.log("Chat created:", newChat);
+        console.log("Chat created successfully:", newChat);
         chatId = newChat.id;
 
         // Add participants
