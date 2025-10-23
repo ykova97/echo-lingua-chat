@@ -111,7 +111,10 @@ const ComposeNewMessage = () => {
   const handleCreateChat = async (message: string) => {
     if (recipients.length === 0) return;
     
-    if (!currentUser || !currentUser.id) {
+    // Get the authenticated user ID directly
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user || !currentUser) {
       toast({
         title: "Error",
         description: "User not loaded. Please refresh the page.",
@@ -123,9 +126,10 @@ const ComposeNewMessage = () => {
     try {
       console.log("Starting chat creation with recipients:", recipients);
       console.log("Current user:", currentUser);
+      console.log("Auth user ID:", user.id);
       
-      // Create or find existing chat
-      const participantIds = [currentUser.id, ...recipients.map(r => r.contact_id)];
+      // Create or find existing chat - use auth user ID
+      const participantIds = [user.id, ...recipients.map(r => r.contact_id)];
       console.log("Participant IDs:", participantIds);
       
       // Check for existing chat with same participants
@@ -155,13 +159,13 @@ const ComposeNewMessage = () => {
         chatId = matchingChat.id;
       } else {
         console.log("Creating new chat...");
-        // Create new chat
+        // Create new chat - use auth user ID
         const { data: newChat, error: chatError } = await supabase
           .from("chats")
           .insert({
             type: participantIds.length > 2 ? "group" : "direct",
             name: participantIds.length > 2 ? recipients.map(r => r.display_name).join(", ") : null,
-            created_by: currentUser.id,
+            created_by: user.id,
           })
           .select()
           .single();
