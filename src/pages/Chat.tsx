@@ -100,6 +100,25 @@ const Chat = () => {
       try {
         const { messages: initialMessages } = await loadMessagesPage();
         setMessages(initialMessages);
+        
+        // Mark all messages as read
+        if (initialMessages.length > 0) {
+          const messageIds = initialMessages
+            .filter(m => m.sender_id !== currentUser.id)
+            .map(m => m.id);
+          
+          if (messageIds.length > 0) {
+            await supabase
+              .from("message_read_receipts")
+              .upsert(
+                messageIds.map(id => ({
+                  message_id: id,
+                  user_id: currentUser.id
+                })),
+                { onConflict: 'message_id,user_id' }
+              );
+          }
+        }
       } catch (error) {
         toast({
           title: "Error loading messages",
@@ -132,6 +151,28 @@ const Chat = () => {
           setMessages((prev) =>
             prev.map((m) => (m.id === t.message_id ? { ...m, translated_text: t.translated_text } : m)),
           );
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `chat_id=eq.${chatId}`,
+        },
+        async (payload) => {
+          const newMsg = payload.new as any;
+          
+          // Mark new message as read if from someone else
+          if (newMsg.sender_id !== currentUser.id) {
+            await supabase
+              .from("message_read_receipts")
+              .upsert({
+                message_id: newMsg.id,
+                user_id: currentUser.id
+              });
+          }
         },
       )
       .subscribe();
