@@ -8,6 +8,7 @@ interface SwipeableChatItemProps {
   chatAvatar: string | undefined;
   lastMessage: string;
   lastMessageTime: string | undefined;
+  unreadCount?: number;
   onChatClick: () => void;
   onDelete: (chatId: string) => void;
 }
@@ -22,6 +23,7 @@ export const SwipeableChatItem = ({
   chatAvatar,
   lastMessage,
   lastMessageTime,
+  unreadCount = 0,
   onChatClick,
   onDelete,
 }: SwipeableChatItemProps) => {
@@ -158,23 +160,34 @@ export const SwipeableChatItem = ({
           transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
-        <Avatar className="w-14 h-14">
-          <AvatarImage src={chatAvatar} />
-          <AvatarFallback className="bg-primary/10 text-primary">
-            {getInitials(chatName)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="w-14 h-14">
+            <AvatarImage src={chatAvatar} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {getInitials(chatName)}
+            </AvatarFallback>
+          </Avatar>
+          {unreadCount > 0 && (
+            <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs font-semibold px-1.5">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </div>
+          )}
+        </div>
         <div className="flex-1 text-left min-w-0">
-          <h3 className="font-semibold text-foreground truncate">{chatName}</h3>
-          <p className="text-sm text-muted-foreground truncate">
+          <h3 className={`font-semibold truncate ${unreadCount > 0 ? 'text-foreground' : 'text-foreground'}`}>
+            {chatName}
+          </h3>
+          <p className={`text-sm truncate ${unreadCount > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
             {lastMessage}
           </p>
         </div>
-        {lastMessageTime && (
-          <span className="text-xs text-muted-foreground shrink-0">
-            {lastMessageTime}
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          {lastMessageTime && (
+            <span className="text-xs text-muted-foreground">
+              {lastMessageTime}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

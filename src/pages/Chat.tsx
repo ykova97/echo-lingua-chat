@@ -246,6 +246,7 @@ const Chat = () => {
                 user_id: user.id,
               }, {
                 onConflict: "message_id,user_id",
+                ignoreDuplicates: true,
               });
           }
 

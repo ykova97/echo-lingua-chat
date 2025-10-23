@@ -28,6 +28,7 @@ interface Chat {
     text: string;
     created_at: string;
   };
+  unread_count?: number;
 }
 
 const ChatList = () => {
@@ -46,8 +47,39 @@ const ChatList = () => {
   useEffect(() => {
     if (currentUser) {
       loadChats();
+      
+      // Subscribe to new messages for all chats
+      const channel = supabase
+        .channel('new-messages')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+          },
+          async (payload) => {
+            const newMsg = payload.new as any;
+            
+            // Check if this message is in one of the user's chats
+            const chatIndex = chats.findIndex(c => c.id === newMsg.chat_id);
+            if (chatIndex !== -1 && newMsg.sender_id !== currentUser.id) {
+              // Increment unread count for this chat
+              setChats(prev => prev.map(chat => 
+                chat.id === newMsg.chat_id 
+                  ? { ...chat, unread_count: (chat.unread_count || 0) + 1 }
+                  : chat
+              ));
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
-  }, [currentUser]);
+  }, [currentUser, chats]);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
@@ -128,6 +160,29 @@ const ChatList = () => {
             .limit(1)
             .single();
 
+          // Get unread count
+          const { data: messages } = await supabase
+            .from("messages")
+            .select("id")
+            .eq("chat_id", chat.id)
+            .neq("sender_id", user.id);
+
+          let unreadCount = 0;
+          if (messages) {
+            for (const msg of messages) {
+              const { data: readReceipt } = await supabase
+                .from("message_read_receipts")
+                .select("id")
+                .eq("message_id", msg.id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+              
+              if (!readReceipt) {
+                unreadCount++;
+              }
+            }
+          }
+
           return {
             ...chat,
             participants: participants || [],
@@ -135,6 +190,7 @@ const ChatList = () => {
               text: lastMessage.original_text,
               created_at: lastMessage.created_at,
             } : undefined,
+            unread_count: unreadCount,
           };
         })
       );
@@ -346,6 +402,7 @@ const ChatList = () => {
                         })
                       : undefined
                   }
+                  unreadCount={chat.unread_count}
                   onChatClick={() => navigate(`/chat/${chat.id}`)}
                   onDelete={(id) => setChatToDelete(id)}
                 />
