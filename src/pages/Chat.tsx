@@ -18,6 +18,14 @@ interface Message {
   sender_image?: string;
   translated_text?: string;
   target_language?: string;
+  reply_to_id?: string;
+  reply_to_text?: string;
+  reply_to_sender?: string;
+  edited_at?: string;
+  is_deleted?: boolean;
+  reactions?: Array<{ reaction: string; user_id: string; user_name?: string; count: number }>;
+  read_by?: number;
+  total_participants?: number;
 }
 
 const Chat = () => {
@@ -30,6 +38,7 @@ const Chat = () => {
   const [chatInfo, setChatInfo] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -139,7 +148,7 @@ const Chat = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get messages
+      // Get messages with reply info
       const { data: msgs, error } = await supabase
         .from("messages")
         .select(`
@@ -147,6 +156,13 @@ const Chat = () => {
           profiles:sender_id (
             name,
             profile_image
+          ),
+          reply_to:reply_to_id (
+            original_text,
+            sender_id,
+            profiles:sender_id (
+              name
+            )
           )
         `)
         .eq("chat_id", chatId)
@@ -154,9 +170,10 @@ const Chat = () => {
 
       if (error) throw error;
 
-      // Get translations
-      const messagesWithTranslations = await Promise.all(
+      // Get translations and reactions for each message
+      const messagesWithData = await Promise.all(
         (msgs || []).map(async (msg: any) => {
+          // Get translation
           const { data: translation } = await supabase
             .from("message_translations")
             .select("translated_text, target_language")
@@ -164,17 +181,40 @@ const Chat = () => {
             .eq("user_id", user.id)
             .single();
 
+          // Get reactions
+          const { data: reactions } = await supabase
+            .from("message_reactions")
+            .select(`
+              reaction,
+              user_id,
+              profiles:user_id (
+                name
+              )
+            `)
+            .eq("message_id", msg.id);
+
+          // Format reactions
+          const formattedReactions = reactions?.map(r => ({
+            reaction: r.reaction,
+            user_id: r.user_id,
+            user_name: (r.profiles as any)?.name,
+            count: 1
+          })) || [];
+
           return {
             ...msg,
             sender_name: msg.profiles?.name,
             sender_image: msg.profiles?.profile_image,
             translated_text: translation?.translated_text,
             target_language: translation?.target_language,
+            reply_to_text: msg.reply_to?.original_text,
+            reply_to_sender: msg.reply_to?.profiles?.name,
+            reactions: formattedReactions,
           };
         })
       );
 
-      setMessages(messagesWithTranslations);
+      setMessages(messagesWithData);
     } catch (error: any) {
       toast({
         title: "Error loading messages",
@@ -196,12 +236,14 @@ const Chat = () => {
           chatId,
           message: newMessage,
           sourceLanguage: currentUser.preferred_language,
+          replyToId: replyingTo?.id,
         },
       });
 
       if (error) throw error;
 
       setNewMessage("");
+      setReplyingTo(null);
     } catch (error: any) {
       toast({
         title: "Error sending message",
@@ -210,6 +252,66 @@ const Chat = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReaction = async (messageId: string, reaction: string) => {
+    if (!currentUser) return;
+    
+    try {
+      // Check if user already reacted with this emoji
+      const { data: existing } = await supabase
+        .from("message_reactions")
+        .select("id")
+        .eq("message_id", messageId)
+        .eq("user_id", currentUser.id)
+        .eq("reaction", reaction)
+        .single();
+
+      if (existing) {
+        // Remove reaction
+        await supabase
+          .from("message_reactions")
+          .delete()
+          .eq("id", existing.id);
+      } else {
+        // Add reaction
+        await supabase
+          .from("message_reactions")
+          .insert({
+            message_id: messageId,
+            user_id: currentUser.id,
+            reaction,
+          });
+      }
+      
+      // Reload messages to show updated reactions
+      await loadMessages();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from("messages")
+        .update({ is_deleted: true })
+        .eq("id", messageId);
+
+      if (error) throw error;
+      
+      await loadMessages();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -260,6 +362,7 @@ const Chat = () => {
             key={message.id}
             message={message}
             isOwn={message.sender_id === currentUser?.id}
+            currentUserId={currentUser?.id}
             showOriginal={showOriginal[message.id] || false}
             onToggleOriginal={() =>
               setShowOriginal((prev) => ({
@@ -267,6 +370,9 @@ const Chat = () => {
                 [message.id]: !prev[message.id],
               }))
             }
+            onReply={() => setReplyingTo(message)}
+            onReaction={(reaction) => handleReaction(message.id, reaction)}
+            onDelete={() => handleDeleteMessage(message.id)}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -274,6 +380,22 @@ const Chat = () => {
 
       {/* Input - iMessage Style */}
       <footer className="bg-card border-t border-border p-3 safe-area-bottom">
+        {replyingTo && (
+          <div className="max-w-4xl mx-auto mb-2 flex items-center gap-2 px-4 py-2 bg-secondary/50 rounded-xl border border-border/50">
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Replying to {replyingTo.sender_name}</p>
+              <p className="text-sm line-clamp-1">{replyingTo.original_text}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReplyingTo(null)}
+              className="h-6 w-6 p-0"
+            >
+              ✕
+            </Button>
+          </div>
+        )}
         <form onSubmit={sendMessage} className="flex items-end gap-2 max-w-4xl mx-auto">
           <div className="flex-1 relative flex items-center bg-secondary/50 rounded-[24px] border border-border/50 px-4 py-2 min-h-[40px]">
             <input

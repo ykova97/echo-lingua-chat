@@ -18,7 +18,7 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { chatId, message, sourceLanguage } = await req.json();
+    const { chatId, message, sourceLanguage, replyToId } = await req.json();
     
     // Get auth user
     const authHeader = req.headers.get('Authorization')!;
@@ -39,6 +39,7 @@ serve(async (req) => {
         sender_id: user.id,
         original_text: message,
         source_language: sourceLanguage,
+        reply_to_id: replyToId || null,
       })
       .select()
       .single();

@@ -14,22 +14,61 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked_at: string | null
+          blocked_id: string
+          blocker_id: string
+          id: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          blocked_id: string
+          blocker_id: string
+          id?: string
+        }
+        Update: {
+          blocked_at?: string | null
+          blocked_id?: string
+          blocker_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_users_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_users_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_participants: {
         Row: {
           chat_id: string
           id: string
+          is_admin: boolean | null
           joined_at: string
           user_id: string
         }
         Insert: {
           chat_id: string
           id?: string
+          is_admin?: boolean | null
           joined_at?: string
           user_id: string
         }
         Update: {
           chat_id?: string
           id?: string
+          is_admin?: boolean | null
           joined_at?: string
           user_id?: string
         }
@@ -66,6 +105,81 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      message_reactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          reaction: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          reaction: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          reaction?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_read_receipts: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_read_receipts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_read_receipts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       message_translations: {
         Row: {
@@ -106,24 +220,33 @@ export type Database = {
         Row: {
           chat_id: string
           created_at: string
+          edited_at: string | null
           id: string
+          is_deleted: boolean | null
           original_text: string
+          reply_to_id: string | null
           sender_id: string
           source_language: string
         }
         Insert: {
           chat_id: string
           created_at?: string
+          edited_at?: string | null
           id?: string
+          is_deleted?: boolean | null
           original_text: string
+          reply_to_id?: string | null
           sender_id: string
           source_language: string
         }
         Update: {
           chat_id?: string
           created_at?: string
+          edited_at?: string | null
           id?: string
+          is_deleted?: boolean | null
           original_text?: string
+          reply_to_id?: string | null
           sender_id?: string
           source_language?: string
         }
@@ -135,32 +258,90 @@ export type Database = {
             referencedRelation: "chats"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      muted_chats: {
+        Row: {
+          chat_id: string
+          id: string
+          muted_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          id?: string
+          muted_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          id?: string
+          muted_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "muted_chats_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "muted_chats_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
           created_at: string
+          handle: string | null
           id: string
+          last_seen: string | null
           name: string
           phone: string | null
           preferred_language: string
           profile_image: string | null
+          show_online_status: boolean | null
+          show_read_receipts: boolean | null
+          status: string | null
         }
         Insert: {
           created_at?: string
+          handle?: string | null
           id: string
+          last_seen?: string | null
           name: string
           phone?: string | null
           preferred_language?: string
           profile_image?: string | null
+          show_online_status?: boolean | null
+          show_read_receipts?: boolean | null
+          status?: string | null
         }
         Update: {
           created_at?: string
+          handle?: string | null
           id?: string
+          last_seen?: string | null
           name?: string
           phone?: string | null
           preferred_language?: string
           profile_image?: string | null
+          show_online_status?: boolean | null
+          show_read_receipts?: boolean | null
+          status?: string | null
         }
         Relationships: []
       }
