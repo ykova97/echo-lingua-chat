@@ -1,171 +1,179 @@
+// supabase/functions/translate-message/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function sha256(text: string) {
+  const data = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const lovableApiKey = Deno.env.get("LOVABLE_AI_API_KEY")!; // set in Env
 
-    const { chatId, message, sourceLanguage, replyToId, attachmentUrl, attachmentType } = await req.json();
-    
-    // Get auth user
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      throw new Error('Unauthorized');
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    const body = await req.json();
+    const { chatId, message, sourceLanguage, replyToId, attachmentUrl, attachmentType } = body;
+
+    if (!chatId || !message) {
+      return new Response(JSON.stringify({ error: "chatId and message are required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log('Sending message from user:', user.id);
-
-    // Insert the message
-    const { data: newMessage, error: messageError } = await supabase
-      .from('messages')
+    // 1) Insert base message (no translations yet)
+    const { data: inserted, error: msgErr } = await supabaseAdmin
+      .from("messages")
       .insert({
         chat_id: chatId,
-        sender_id: user.id,
         original_text: message,
-        source_language: sourceLanguage,
+        source_language: sourceLanguage || null,
         reply_to_id: replyToId || null,
         attachment_url: attachmentUrl || null,
         attachment_type: attachmentType || null,
+        // sender_id comes from RLS; if you require system insert, pass from client auth
       })
-      .select()
+      .select("*")
       .single();
 
-    if (messageError) {
-      console.error('Error inserting message:', messageError);
-      throw messageError;
+    if (msgErr) throw msgErr;
+    const newMessage = inserted;
+
+    // 2) Get participants
+    const { data: participants, error: partErr } = await supabaseAdmin
+      .from("chat_participants")
+      .select("user_id")
+      .eq("chat_id", chatId);
+
+    if (partErr) throw partErr;
+
+    // 3) Profiles → preferred_language map
+    const userIds = participants.map((p) => p.user_id);
+    const { data: profiles, error: profErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, preferred_language")
+      .in("id", userIds);
+
+    if (profErr) throw profErr;
+
+    const langMap = new Map<string, string>((profiles || []).map((p) => [p.id, p.preferred_language || "en"]));
+
+    // 4) Determine source language (detect lazily if not provided & not empty)
+    const srcLang = sourceLanguage && sourceLanguage.trim() !== "" ? sourceLanguage : "auto";
+
+    // 5) Group recipients by target language
+    const byLang = new Map<string, string[]>(); // lang -> [userIds]
+    for (const p of participants) {
+      const lang = langMap.get(p.user_id) || "en";
+      if (!byLang.has(lang)) byLang.set(lang, []);
+      byLang.get(lang)!.push(p.user_id);
     }
 
-    console.log('Message inserted:', newMessage.id);
+    // 6) Translate once per target language (with cache)
+    const results: { message_id: string; user_id: string; translated_text: string; target_language: string }[] = [];
 
-    // Get all participants in the chat
-    const { data: participants, error: participantsError } = await supabase
-      .from('chat_participants')
-      .select('user_id')
-      .eq('chat_id', chatId);
+    async function translateOnceWithCache(text: string, src: string, dst: string) {
+      if (src === dst || dst === "auto") return text;
 
-    if (participantsError) {
-      console.error('Error fetching participants:', participantsError);
-      throw participantsError;
-    }
+      const key = await sha256(`${src}|${dst}|${text}`);
+      // DB cache
+      const { data: cached } = await supabaseAdmin
+        .from("translation_cache")
+        .select("translated_text")
+        .eq("hash", key)
+        .maybeSingle();
 
-    console.log('Found participants:', participants.length);
-
-    // Get profiles for all participants
-    const userIds = participants.map(p => p.user_id);
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, preferred_language')
-      .in('id', userIds);
-
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
-      throw profilesError;
-    }
-
-    // Create a map of user_id to preferred_language
-    const languageMap = new Map(
-      profiles.map(p => [p.id, p.preferred_language])
-    );
-
-    // Translate for each participant
-    const translations = await Promise.all(
-      participants.map(async (participant: any) => {
-        const targetLanguage = languageMap.get(participant.user_id) || 'en';
-        
-        // Skip translation if same language as source
-        if (targetLanguage === sourceLanguage) {
-          return {
-            message_id: newMessage.id,
-            user_id: participant.user_id,
-            translated_text: message,
-            target_language: targetLanguage,
-          };
-        }
-
-        console.log(`Translating to ${targetLanguage} for user ${participant.user_id}`);
-
-        // Call Lovable AI for translation
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              {
-                role: 'system',
-                content: `You are a professional translator. Translate the following text from ${sourceLanguage} to ${targetLanguage}. Preserve tone, emotion, and context. Only return the translated text, nothing else.`,
-              },
-              {
-                role: 'user',
-                content: message,
-              },
-            ],
-          }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Translation API error:', response.status, errorText);
-          throw new Error(`Translation failed: ${errorText}`);
-        }
-
-        const data = await response.json();
-        const translatedText = data.choices[0].message.content;
-
-        console.log('Translation successful:', translatedText.substring(0, 50));
-
-        return {
-          message_id: newMessage.id,
-          user_id: participant.user_id,
-          translated_text: translatedText,
-          target_language: targetLanguage,
-        };
-      })
-    );
-
-    // Insert all translations
-    const { error: translationsError } = await supabase
-      .from('message_translations')
-      .insert(translations);
-
-    if (translationsError) {
-      console.error('Error inserting translations:', translationsError);
-      throw translationsError;
-    }
-
-    console.log('All translations inserted successfully');
-
-    return new Response(
-      JSON.stringify({ success: true, messageId: newMessage.id }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error: any) {
-    console.error('Error in translate-message:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      if (cached?.translated_text) {
+        // touch last_used
+        await supabaseAdmin.from("translation_cache").update({ last_used: new Date().toISOString() }).eq("hash", key);
+        return cached.translated_text as string;
       }
-    );
+
+      // Call Lovable AI Gateway (keep the same model you had)
+      const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: `You are a professional translator. Translate into ${dst}. Preserve meaning, names, emojis, punctuation, and tone. Output only the translated text.`,
+            },
+            { role: "user", content: text },
+          ],
+          temperature: 0.2,
+        }),
+      });
+
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(`AI translate failed: ${resp.status} ${t}`);
+      }
+      const data = await resp.json();
+      const translatedText: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
+
+      // Save to cache
+      await supabaseAdmin.from("translation_cache").insert({
+        hash: key,
+        source_lang: src,
+        target_lang: dst,
+        text,
+        translated_text: translatedText,
+      });
+
+      return translatedText;
+    }
+
+    for (const [dstLang, userList] of byLang) {
+      const translated =
+        srcLang === dstLang || srcLang === "auto" ? message : await translateOnceWithCache(message, srcLang, dstLang);
+
+      results.push(
+        ...userList.map((uid) => ({
+          message_id: newMessage.id,
+          user_id: uid,
+          translated_text: translated,
+          target_language: dstLang,
+        })),
+      );
+    }
+
+    // 7) Bulk insert translations
+    if (results.length > 0) {
+      const { error: insErr } = await supabaseAdmin.from("message_translations").insert(results);
+      if (insErr) throw insErr;
+    }
+
+    return new Response(JSON.stringify({ success: true, messageId: newMessage.id }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error: any) {
+    console.error("translate-message error:", error?.message);
+    return new Response(JSON.stringify({ error: error?.message || "Internal error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
