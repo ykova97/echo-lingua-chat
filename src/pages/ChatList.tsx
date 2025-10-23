@@ -41,11 +41,21 @@ const ChatList = () => {
 
   useEffect(() => {
     checkAuth();
-    loadChats();
+  }, []);
 
+  useEffect(() => {
+    if (currentUser) {
+      loadChats();
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         navigate("/auth");
+      } else if (event === 'SIGNED_IN') {
+        // Refresh user data when signed in
+        checkAuth();
       }
     });
 

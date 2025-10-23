@@ -42,6 +42,11 @@ const Chat = () => {
 
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    
     loadChat();
     loadMessages();
 
@@ -64,15 +69,17 @@ const Chat = () => {
             .from("profiles")
             .select("name, profile_image")
             .eq("id", newMsg.sender_id)
-            .single();
+            .maybeSingle();
 
-          // Get translation for current user
+          // Get translation for current user - only if currentUser exists
+          if (!currentUser?.id) return;
+          
           const { data: translation } = await supabase
             .from("message_translations")
             .select("translated_text, target_language")
             .eq("message_id", newMsg.id)
             .eq("user_id", currentUser.id)
-            .single();
+            .maybeSingle();
 
           setMessages((prev) => [
             ...prev,
@@ -91,7 +98,7 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatId]);
+  }, [chatId, currentUser]);
 
   useEffect(() => {
     scrollToBottom();
