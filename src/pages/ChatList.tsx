@@ -170,17 +170,20 @@ const ChatList = () => {
   const handleDeleteChat = async () => {
     if (!chatToDelete) return;
 
+    const deletedChatId = chatToDelete;
+    
+    // Close dialog first
+    setChatToDelete(null);
+
     try {
-      // Optimistically remove from UI
-      setChats((prev) => prev.filter((chat) => chat.id !== chatToDelete));
-      setChatToDelete(null);
+      // Optimistically remove from UI immediately
+      setChats((prevChats) => prevChats.filter((chat) => chat.id !== deletedChatId));
 
       // Delete all related data first due to foreign key constraints
-      // Delete message reactions
       const { data: messages } = await supabase
         .from("messages")
         .select("id")
-        .eq("chat_id", chatToDelete);
+        .eq("chat_id", deletedChatId);
 
       if (messages) {
         for (const msg of messages) {
@@ -205,25 +208,25 @@ const ChatList = () => {
       await supabase
         .from("messages")
         .delete()
-        .eq("chat_id", chatToDelete);
+        .eq("chat_id", deletedChatId);
 
       // Delete chat participants
       await supabase
         .from("chat_participants")
         .delete()
-        .eq("chat_id", chatToDelete);
+        .eq("chat_id", deletedChatId);
 
       // Delete muted chats
       await supabase
         .from("muted_chats")
         .delete()
-        .eq("chat_id", chatToDelete);
+        .eq("chat_id", deletedChatId);
 
       // Delete the chat itself
       const { error } = await supabase
         .from("chats")
         .delete()
-        .eq("id", chatToDelete);
+        .eq("id", deletedChatId);
 
       if (error) throw error;
 
@@ -232,6 +235,7 @@ const ChatList = () => {
         description: "The conversation has been removed.",
       });
     } catch (error: any) {
+      console.error("Delete error:", error);
       toast({
         title: "Error deleting chat",
         description: error.message,
