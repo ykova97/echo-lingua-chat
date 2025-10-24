@@ -93,25 +93,107 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          delete_after: string | null
           id: string
+          is_ephemeral: boolean
           name: string | null
           type: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          delete_after?: string | null
           id?: string
+          is_ephemeral?: boolean
           name?: string | null
           type: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          delete_after?: string | null
           id?: string
+          is_ephemeral?: boolean
           name?: string | null
           type?: string
         }
         Relationships: []
+      }
+      guest_invites: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          inviter_id: string
+          max_uses: number
+          token: string
+          used_count: number
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          inviter_id: string
+          max_uses?: number
+          token: string
+          used_count?: number
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          inviter_id?: string
+          max_uses?: number
+          token?: string
+          used_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_sessions: {
+        Row: {
+          created_at: string
+          display_name: string
+          expires_at: string
+          id: string
+          invite_id: string
+          last_active_at: string
+          preferred_language: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          expires_at?: string
+          id?: string
+          invite_id: string
+          last_active_at?: string
+          preferred_language: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          expires_at?: string
+          id?: string
+          invite_id?: string
+          last_active_at?: string
+          preferred_language?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_sessions_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "guest_invites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       message_reactions: {
         Row: {
