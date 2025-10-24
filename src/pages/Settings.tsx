@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Globe, Camera, Mail, Phone, User } from "lucide-react";
 import { BlockedUsers } from "@/components/settings/BlockedUsers";
 import { Separator } from "@/components/ui/separator";
+import ProfileQRCode from "@/pages/Settings/ProfileQRCode";
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -345,6 +346,18 @@ const Settings = () => {
           >
             {loading ? "Saving..." : "Save Changes"}
           </Button>
+        </div>
+
+        {/* Guest Invite QR Code Section */}
+        <div className="bg-card rounded-2xl shadow-sm p-6 border border-border space-y-4 mt-6">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Guest Invite</h2>
+            <p className="text-sm text-muted-foreground">
+              Generate a QR code to invite guests for temporary chats
+            </p>
+          </div>
+          <Separator />
+          <ProfileQRCode />
         </div>
 
         {/* Blocked Users Section */}
