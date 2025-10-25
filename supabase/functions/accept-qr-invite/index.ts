@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+import { SignJWT } from "https://deno.land/x/jose@v5.2.0/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,15 +13,6 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    // Use SUPABASE_JWT_SECRET for signing guest JWTs
-    const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET") || "";
-    
-    console.log("Environment check:", {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasServiceKey: !!serviceKey,
-      hasJwtSecret: !!jwtSecret,
-      jwtSecretLength: jwtSecret?.length || 0,
-    });
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false }});
 
@@ -93,37 +84,20 @@ serve(async (req) => {
       .update({ used_count: invite.used_count + 1 })
       .eq("id", invite.id);
 
-    const payload = {
-      aud: "authenticated",
-      role: "authenticated",
-      exp: getNumericDate(60 * 60 * 4),
+    // Create JWT using jose library (compatible with Supabase JWT secrets)
+    const jwtSecret = new TextEncoder().encode(
+      Deno.env.get("SUPABASE_JWT_SECRET") || ""
+    );
+    
+    const guestJwt = await new SignJWT({
       chat_id: chat.id,
       guest_session_id: guest.id,
-    };
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setAudience("authenticated")
+      .setExpirationTime("4h")
+      .sign(jwtSecret);
 
-    console.log("Creating JWT with secret length:", jwtSecret?.length);
-    
-    // Use TextEncoder to convert string to Uint8Array
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(jwtSecret);
-    
-    let guestJwt: string;
-    try {
-      const cryptoKey = await crypto.subtle.importKey(
-        "raw",
-        keyData,
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign", "verify"]
-      );
-      guestJwt = await create({ alg: "HS256", typ: "JWT" }, payload, cryptoKey);
-      
-      console.log("Successfully created JWT");
-    } catch (keyError: any) {
-      console.error("Error creating crypto key:", keyError);
-      throw new Error(`Failed to create JWT: ${keyError?.message || 'Unknown error'}`);
-    }
-    
     const guestChatUrl = `${baseUrl.replace(/\/$/, "")}/guest-chat/${chat.id}`;
 
     return new Response(JSON.stringify({
