@@ -22,11 +22,11 @@ serve(async (req) => {
       });
     }
 
-    // Use baseUrl from request or fall back to PUBLIC_APP_URL secret
-    let baseUrl = body?.baseUrl || Deno.env.get("PUBLIC_APP_URL");
+    // Use baseUrl from request or fall back to the configured domain
+    let baseUrl = body?.baseUrl || "https://lynk-chat.com";
     
     if (!baseUrl) {
-      return new Response(JSON.stringify({ error: "baseUrl or PUBLIC_APP_URL must be configured" }), {
+      return new Response(JSON.stringify({ error: "baseUrl must be configured" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
