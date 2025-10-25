@@ -38,6 +38,8 @@ export default function GuestJoin() {
 
     setLoading(true);
     try {
+      console.log("Calling accept-qr-invite with:", { token, name: name.trim(), preferredLanguage: lang, baseUrl: SUPABASE_URL });
+      
       const res = await fetch(`${SUPABASE_URL}/functions/v1/accept-qr-invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49,12 +51,17 @@ export default function GuestJoin() {
         }),
       });
 
+      console.log("Response status:", res.status);
+      
       if (!res.ok) {
         const t = await res.text();
+        console.error("accept-qr-invite failed:", { status: res.status, body: t });
         throw new Error(`accept-qr-invite failed (${res.status}): ${t}`);
       }
 
       const data = await res.json();
+      console.log("Response data:", data);
+      
       if (!data?.guestJwt || !data?.chatId) {
         throw new Error("Missing guestJwt or chatId");
       }
@@ -65,6 +72,7 @@ export default function GuestJoin() {
 
       navigate(`/guest-chat/${data.chatId}`);
     } catch (err: any) {
+      console.error("Full error:", err);
       toast({
         title: "Couldn't start guest chat",
         description: err?.message || "Please try again.",
