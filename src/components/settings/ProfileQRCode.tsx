@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import QRCode from "qrcode.react";
-
-// If Lovable hosts functions under a different base, change this:
-const FUNCTION_BASE = "/functions/v1";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
@@ -16,31 +14,27 @@ export default function ProfileQRCode() {
         setLoading(true);
         setErrorMsg("");
 
-        // Get current user from your auth source.
-        // If you have a profile context, use that.
-        // For now, try to read from local storage or a user endpoint if available.
-        const raw = localStorage.getItem("currentUser");
-        const user = raw ? JSON.parse(raw) : null;
-        const inviterId = user?.id; // adjust to your actual user shape
-
-        if (!inviterId) {
-          setErrorMsg("User not loaded. Please sign in.");
+        // Get current user from Supabase auth
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          setErrorMsg("Please sign in to generate QR code.");
           setLoading(false);
           return;
         }
 
-        const res = await fetch(`${FUNCTION_BASE}/create-qr-invite`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ inviterId, ttlHours: 24, maxUses: 5 }),
+        // Call the edge function to create the invite
+        const { data, error } = await supabase.functions.invoke('create-qr-invite', {
+          body: { inviterId: user.id, ttlHours: 24, maxUses: 5 }
         });
 
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(`create-qr-invite failed: ${res.status} ${t}`);
+        if (error) {
+          throw new Error(error.message || "Failed to create invite");
         }
-        const data = await res.json();
-        if (data?.inviteUrl) setInviteUrl(data.inviteUrl);
+        
+        if (data?.inviteUrl) {
+          setInviteUrl(data.inviteUrl);
+        }
       } catch (err: any) {
         setErrorMsg(err?.message || "Failed to create invite.");
       } finally {
