@@ -137,4 +137,10 @@
   .overscroll-contain {
     overscroll-behavior-y: contain;
   }
+  .scroll-y-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+  .overscroll-contain {
+    overscroll-behavior-y: contain;
+  }
 }
