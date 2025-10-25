@@ -13,10 +13,16 @@ serve(async (req) => {
   }
 
   try {
-    const { inviterId, ttlHours = 24, maxUses = 1 } = await req.json();
+    const { inviterId, ttlHours = 24, maxUses = 1, baseUrl } = await req.json();
 
     if (!inviterId) {
       return new Response(JSON.stringify({ error: "inviterId required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!baseUrl) {
+      return new Response(JSON.stringify({ error: "baseUrl required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -39,7 +45,6 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    const baseUrl = Deno.env.get("PUBLIC_APP_URL")!;
     const inviteUrl = `${baseUrl.replace(/\/$/, "")}/guest/${data.token}`;
 
     return new Response(JSON.stringify({ inviteUrl, token: data.token, expiresAt: data.expires_at }), {

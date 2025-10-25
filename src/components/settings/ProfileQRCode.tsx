@@ -25,7 +25,12 @@ export default function ProfileQRCode() {
 
         // Call the edge function to create the invite
         const { data, error } = await supabase.functions.invoke('create-qr-invite', {
-          body: { inviterId: user.id, ttlHours: 24, maxUses: 5 }
+          body: { 
+            inviterId: user.id, 
+            ttlHours: 24, 
+            maxUses: 5,
+            baseUrl: window.location.origin
+          }
         });
 
         if (error) {
