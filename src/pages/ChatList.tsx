@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Plus, LogOut, Settings, Search } from "lucide-react";
+import { MessageCircle, Plus, LogOut, Settings, Search, QrCode } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { SwipeableChatItem } from "@/components/chat/SwipeableChatItem";
@@ -17,6 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import ProfileQRCode from "@/components/settings/ProfileQRCode";
 
 interface Chat {
   id: string;
@@ -40,6 +47,7 @@ const ChatList = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -499,9 +507,14 @@ const ChatList = () => {
               className="pl-10 bg-secondary/50 border-0 rounded-xl"
             />
           </div>
-          <Button size="icon" onClick={() => navigate("/compose")} className="rounded-full">
-            <Plus className="w-5 h-5" />
-          </Button>
+          <div className="flex gap-2">
+            <Button size="icon" onClick={() => setQrDialogOpen(true)} className="rounded-full" variant="outline">
+              <QrCode className="w-5 h-5" />
+            </Button>
+            <Button size="icon" onClick={() => navigate("/compose")} className="rounded-full">
+              <Plus className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -573,6 +586,16 @@ const ChatList = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Guest Invite QR Code</DialogTitle>
+          </DialogHeader>
+          <ProfileQRCode />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
