@@ -15,22 +15,26 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     // Use SUPABASE_ANON_KEY as JWT signing secret since custom secrets aren't exposed to edge functions
     const jwtSecret = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("GUEST_JWT_SECRET") || "";
-    const baseUrl = Deno.env.get("PUBLIC_APP_URL") || supabaseUrl;
     
     console.log("Environment check:", {
       hasSupabaseUrl: !!supabaseUrl,
       hasServiceKey: !!serviceKey,
       hasJwtSecret: !!jwtSecret,
       jwtSecretLength: jwtSecret?.length || 0,
-      hasBaseUrl: !!baseUrl,
     });
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false }});
 
-    const { token, name, preferredLanguage = "en" } = await req.json();
+    const { token, name, preferredLanguage = "en", baseUrl } = await req.json();
 
     if (!token || !name) {
       return new Response(JSON.stringify({ error: "token and name are required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!baseUrl) {
+      return new Response(JSON.stringify({ error: "baseUrl is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

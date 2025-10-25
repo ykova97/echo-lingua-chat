@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const LANGS = [
   { code: "en", label: "English" },
@@ -14,10 +15,6 @@ const LANGS = [
   { code: "pt", label: "Portuguese" },
   { code: "ru", label: "Russian" },
 ];
-
-// If your Lovable project uses a different base path for functions, set VITE_FUNCTION_BASE in env.
-// Defaults to Lovable's standard: /functions/v1
-const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
 
 export default function GuestJoin() {
   const { token } = useParams();
@@ -39,22 +36,19 @@ export default function GuestJoin() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${FUNCTION_BASE}/accept-qr-invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('accept-qr-invite', {
+        body: {
           token,
           name: name.trim(),
           preferredLanguage: lang,
-        }),
+          baseUrl: window.location.origin
+        }
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`accept-qr-invite failed (${res.status}): ${text}`);
+      if (error) {
+        throw new Error(error.message || "Failed to accept invite");
       }
 
-      const data = await res.json();
       if (!data?.guestJwt || !data?.chatId) {
         throw new Error("Missing guestJwt or chatId from server response.");
       }
@@ -67,7 +61,7 @@ export default function GuestJoin() {
       navigate(`/guest-chat/${data.chatId}`);
     } catch (err: any) {
       toast({
-        title: "Couldn’t start guest chat",
+        title: "Couldn't start guest chat",
         description: err?.message || "Please try again.",
         variant: "destructive",
       });
