@@ -88,7 +88,16 @@ serve(async (req) => {
       guest_session_id: guest.id,
     };
 
-    const guestJwt = await create({ alg: "HS256", typ: "JWT" }, payload, jwtSecret);
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(jwtSecret);
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign", "verify"]
+    );
+    const guestJwt = await create({ alg: "HS256", typ: "JWT" }, payload, cryptoKey);
     const guestChatUrl = `${baseUrl.replace(/\/$/, "")}/guest-chat/${chat.id}`;
 
     return new Response(JSON.stringify({
@@ -101,7 +110,8 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("accept-qr-invite error:", e);
-    return new Response(JSON.stringify({ error: e?.message || "Internal error" }), {
+    const errorMessage = e instanceof Error ? e.message : "Internal error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

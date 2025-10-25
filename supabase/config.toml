@@ -1,1 +1,16 @@
 project_id = "zakhdgsapuahjuqsbsfd"
+
+[functions.create-qr-invite]
+verify_jwt = false
+
+[functions.accept-qr-invite]
+verify_jwt = false
+
+[functions.guest-close]
+verify_jwt = false
+
+[functions.cleanup-ephemeral-chats]
+verify_jwt = false
+
+[functions.cleanup-ephemeral-chats.schedule]
+cron = "*/15 * * * *"

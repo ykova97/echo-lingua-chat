@@ -47,7 +47,8 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("create-qr-invite error:", e);
-    return new Response(JSON.stringify({ error: e?.message || "Internal error" }), {
+    const errorMessage = e instanceof Error ? e.message : "Internal error";
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
