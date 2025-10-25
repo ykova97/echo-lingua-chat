@@ -101,18 +101,29 @@ serve(async (req) => {
       guest_session_id: guest.id,
     };
 
-    // Decode base64 JWT secret
-    const jwtSecretBase64 = jwtSecret.replace(/-/g, '+').replace(/_/g, '/');
-    const keyData = Uint8Array.from(atob(jwtSecretBase64), c => c.charCodeAt(0));
+    console.log("Creating JWT with secret length:", jwtSecret?.length);
     
-    const cryptoKey = await crypto.subtle.importKey(
-      "raw",
-      keyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign", "verify"]
-    );
-    const guestJwt = await create({ alg: "HS256", typ: "JWT" }, payload, cryptoKey);
+    // Use TextEncoder to convert string to Uint8Array
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(jwtSecret);
+    
+    let guestJwt: string;
+    try {
+      const cryptoKey = await crypto.subtle.importKey(
+        "raw",
+        keyData,
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign", "verify"]
+      );
+      guestJwt = await create({ alg: "HS256", typ: "JWT" }, payload, cryptoKey);
+      
+      console.log("Successfully created JWT");
+    } catch (keyError: any) {
+      console.error("Error creating crypto key:", keyError);
+      throw new Error(`Failed to create JWT: ${keyError?.message || 'Unknown error'}`);
+    }
+    
     const guestChatUrl = `${baseUrl.replace(/\/$/, "")}/guest-chat/${chat.id}`;
 
     return new Response(JSON.stringify({
