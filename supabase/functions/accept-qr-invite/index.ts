@@ -8,7 +8,12 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  console.log("=== accept-qr-invite function invoked ===", { method: req.method, url: req.url });
+  
+  if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
+    return new Response(null, { headers: corsHeaders });
+  }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -92,19 +97,30 @@ serve(async (req) => {
       .update({ used_count: invite.used_count + 1 })
       .eq("id", invite.id);
 
-    // Create JWT using jose library (compatible with Supabase JWT secrets)
-    const jwtSecret = new TextEncoder().encode(
-      Deno.env.get("SUPABASE_JWT_SECRET") || ""
-    );
+    // Create JWT using jose library
+    console.log("Creating guest JWT for chat:", chat.id, "guest:", guest.id);
+    
+    const jwtSecretString = Deno.env.get("SUPABASE_JWT_SECRET");
+    if (!jwtSecretString) {
+      throw new Error("SUPABASE_JWT_SECRET not configured");
+    }
+    
+    const jwtSecret = new TextEncoder().encode(jwtSecretString);
+    console.log("JWT secret length:", jwtSecret.length);
     
     const guestJwt = await new SignJWT({
       chat_id: chat.id,
       guest_session_id: guest.id,
+      role: "guest",
     })
       .setProtectedHeader({ alg: "HS256" })
+      .setIssuer(supabaseUrl)
       .setAudience("authenticated")
+      .setIssuedAt()
       .setExpirationTime("4h")
       .sign(jwtSecret);
+    
+    console.log("JWT created successfully");
 
     const guestChatUrl = `${baseUrl.replace(/\/$/, "")}/guest-chat/${chat.id}`;
 
