@@ -452,6 +452,24 @@ export type Database = {
         }
         Relationships: []
       }
+      qr_rate_limits: {
+        Row: {
+          count: number
+          inviter_id: string
+          minute_bucket: string
+        }
+        Insert: {
+          count?: number
+          inviter_id: string
+          minute_bucket: string
+        }
+        Update: {
+          count?: number
+          inviter_id?: string
+          minute_bucket?: string
+        }
+        Relationships: []
+      }
       translation_cache: {
         Row: {
           created_at: string
@@ -511,6 +529,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       find_or_create_chat: {
         Args: { participant_ids: string[] }
         Returns: string

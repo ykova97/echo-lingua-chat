@@ -47,6 +47,55 @@ serve(async (req) => {
 
     console.log("Found inviter profile:", inviterProfile.id, inviterProfile.name);
 
+    // Rate limiting check
+    const minuteBucket = new Date();
+    minuteBucket.setSeconds(0, 0); // Truncate to minute
+    const minuteBucketStr = minuteBucket.toISOString();
+
+    // Check current rate limit
+    const { data: rateLimit, error: rateLimitError } = await supabase
+      .from("qr_rate_limits")
+      .select("count")
+      .eq("inviter_id", inviterProfile.id)
+      .eq("minute_bucket", minuteBucketStr)
+      .maybeSingle();
+
+    if (rateLimit && rateLimit.count >= 5) {
+      console.warn("Rate limit exceeded for inviter:", inviterProfile.id);
+      return new Response(
+        JSON.stringify({ 
+          error: "Too many requests. Please wait a moment before creating another chat.",
+          retryAfter: 60 
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update rate limit counter
+    if (rateLimit) {
+      await supabase
+        .from("qr_rate_limits")
+        .update({ count: rateLimit.count + 1 })
+        .eq("inviter_id", inviterProfile.id)
+        .eq("minute_bucket", minuteBucketStr);
+    } else {
+      await supabase
+        .from("qr_rate_limits")
+        .insert({
+          inviter_id: inviterProfile.id,
+          minute_bucket: minuteBucketStr,
+          count: 1,
+        });
+    }
+
+    // Optional CAPTCHA check (placeholder for future implementation)
+    const captchaEnabled = Deno.env.get("CAPTCHA_ENABLED") === "true";
+    if (captchaEnabled) {
+      console.log("CAPTCHA is enabled but not yet implemented");
+      // TODO: Implement CAPTCHA verification here
+      // For now, just log that it's enabled
+    }
+
     // 2) Create guest session
     const guestSessionId = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + inviterProfile.max_guest_hours * 3600_000);

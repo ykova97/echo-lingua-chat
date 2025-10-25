@@ -39,6 +39,13 @@ serve(async () => {
     return new Response(JSON.stringify({ ok: false, error: delChatsErr.message }), { status: 500 });
   }
 
+  // Clean up old rate limit entries (older than 5 minutes)
+  const { error: rateLimitCleanupErr } = await supabase.rpc("cleanup_old_rate_limits");
+  if (rateLimitCleanupErr) {
+    console.error("Rate limit cleanup error:", rateLimitCleanupErr);
+    // Don't fail the whole operation if rate limit cleanup fails
+  }
+
   return new Response(JSON.stringify({ ok: true, deleted: chatIds.length }), {
     headers: { "Content-Type": "application/json" },
   });
