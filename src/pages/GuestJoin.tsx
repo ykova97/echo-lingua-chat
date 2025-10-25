@@ -17,7 +17,7 @@ const LANGS = [
 ];
 
 export default function GuestJoin() {
-  const { token } = useParams();
+  const { token, slug } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -30,13 +30,23 @@ export default function GuestJoin() {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.functions.invoke("accept-qr-invite", {
-      body: { token, name: name.trim(), preferredLanguage: lang },
-    });
+
+    // Determine which flow to use based on route params
+    const isSlugFlow = !!slug;
+    const functionName = isSlugFlow ? "start-guest-chat" : "accept-qr-invite";
+    const body = isSlugFlow
+      ? { slug, name: name.trim(), preferredLanguage: lang }
+      : { token, name: name.trim(), preferredLanguage: lang };
+
+    const { data, error } = await supabase.functions.invoke(functionName, { body });
     setLoading(false);
 
     if (error || !data?.guestJwt || !data?.chatId) {
-      toast({ title: "Couldn’t start guest chat", description: error?.message || "Please try again.", variant: "destructive" });
+      toast({ 
+        title: "Couldn't start guest chat", 
+        description: error?.message || "Please try again.", 
+        variant: "destructive" 
+      });
       return;
     }
 
