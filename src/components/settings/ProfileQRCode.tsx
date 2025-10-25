@@ -28,8 +28,7 @@ export default function ProfileQRCode() {
           body: { 
             inviterId: user.id, 
             ttlHours: 24, 
-            maxUses: 5,
-            baseUrl: window.location.origin
+            maxUses: 5
           }
         });
 
