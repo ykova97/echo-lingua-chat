@@ -1,105 +1,75 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import QRCode from "react-qr-code";
-import { RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import QRCode from "qrcode.react";
+
+// If Lovable hosts functions under a different base, change this:
+const FUNCTION_BASE = "/functions/v1";
 
 export default function ProfileQRCode() {
-  const [joinUrl, setJoinUrl] = useState<string>("");
-  const [qrSlug, setQrSlug] = useState<string>("");
-  const [isRotating, setIsRotating] = useState(false);
-
-  const loadProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.id) return;
-
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("qr_slug")
-      .eq("id", user.id)
-      .single();
-
-    if (error || !profile?.qr_slug) {
-      console.error("Failed to load profile:", error);
-      toast.error("Failed to load QR code");
-      return;
-    }
-
-    // Use the current app URL, not the Supabase URL
-    const baseUrl = window.location.origin;
-    const url = `${baseUrl}/join/${profile.qr_slug}`;
-    setQrSlug(profile.qr_slug);
-    setJoinUrl(url);
-  };
+  const [inviteUrl, setInviteUrl] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   useEffect(() => {
-    loadProfile();
+    (async () => {
+      try {
+        setLoading(true);
+        setErrorMsg("");
+
+        // Get current user from your auth source.
+        // If you have a profile context, use that.
+        // For now, try to read from local storage or a user endpoint if available.
+        const raw = localStorage.getItem("currentUser");
+        const user = raw ? JSON.parse(raw) : null;
+        const inviterId = user?.id; // adjust to your actual user shape
+
+        if (!inviterId) {
+          setErrorMsg("User not loaded. Please sign in.");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`${FUNCTION_BASE}/create-qr-invite`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ inviterId, ttlHours: 24, maxUses: 5 }),
+        });
+
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`create-qr-invite failed: ${res.status} ${t}`);
+        }
+        const data = await res.json();
+        if (data?.inviteUrl) setInviteUrl(data.inviteUrl);
+      } catch (err: any) {
+        setErrorMsg(err?.message || "Failed to create invite.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const handleRotate = async () => {
-    setIsRotating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("rotate-qr-slug");
-
-      if (error) throw error;
-
-      if (data?.qrSlug) {
-        const baseUrl = window.location.origin;
-        const url = `${baseUrl}/join/${data.qrSlug}`;
-        setQrSlug(data.qrSlug);
-        setJoinUrl(url);
-        toast.success("QR code rotated successfully");
-      }
-    } catch (err) {
-      console.error("Failed to rotate QR:", err);
-      toast.error("Failed to rotate QR code");
-    } finally {
-      setIsRotating(false);
-    }
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(joinUrl);
-    toast.success("Link copied to clipboard");
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: "Chat with me", url: joinUrl });
-    } else {
-      toast.error("Sharing not supported on this device");
-    }
-  };
-
-  if (!joinUrl) return null;
+  if (loading) return <div className="text-sm text-muted-foreground">Generating QR…</div>;
+  if (errorMsg) return <div className="text-sm text-red-500">{errorMsg}</div>;
+  if (!inviteUrl) return null;
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <QRCode value={joinUrl} size={220} />
-      <div className="text-xs break-all text-muted-foreground max-w-[220px]">
-        {joinUrl}
-      </div>
-      <div className="flex gap-2 flex-wrap justify-center">
-        <Button variant="outline" size="sm" onClick={handleCopy}>
+      <QRCode value={inviteUrl} size={220} />
+      <div className="text-xs break-all text-muted-foreground">{inviteUrl}</div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
           Copy link
         </Button>
-        <Button variant="outline" size="sm" onClick={handleShare}>
+        <Button
+          onClick={() => {
+            if (navigator.share) navigator.share({ title: "Link invite", url: inviteUrl });
+          }}
+        >
           Share
         </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRotate}
-          disabled={isRotating}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRotating ? "animate-spin" : ""}`} />
-          Rotate QR
-        </Button>
       </div>
-      <p className="text-xs text-muted-foreground text-center">
-        Scan to start a temporary chat. Rotate to generate a new link.
-      </p>
+      <p className="text-xs text-muted-foreground">Scan to start a temporary chat.</p>
     </div>
   );
 }
