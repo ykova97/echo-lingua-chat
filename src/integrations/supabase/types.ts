@@ -156,7 +156,7 @@ export type Database = {
           display_name: string
           expires_at: string
           id: string
-          invite_id: string
+          invite_id: string | null
           last_active_at: string
           preferred_language: string
         }
@@ -165,7 +165,7 @@ export type Database = {
           display_name: string
           expires_at?: string
           id?: string
-          invite_id: string
+          invite_id?: string | null
           last_active_at?: string
           preferred_language: string
         }
@@ -174,7 +174,7 @@ export type Database = {
           display_name?: string
           expires_at?: string
           id?: string
-          invite_id?: string
+          invite_id?: string | null
           last_active_at?: string
           preferred_language?: string
         }
