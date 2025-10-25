@@ -235,17 +235,57 @@ const ChatList = () => {
           const chat = cp.chats;
           
           // Get all participants
-          const { data: participants } = await supabase
+          const { data: participantIds } = await supabase
             .from("chat_participants")
-            .select(`
-              user_id,
-              profiles (
-                name,
-                profile_image,
-                preferred_language
-              )
-            `)
+            .select("user_id")
             .eq("chat_id", chat.id);
+
+          // Fetch data for each participant (could be profile or guest)
+          const participants = await Promise.all(
+            (participantIds || []).map(async (p: any) => {
+              // Try to get profile first
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("name, profile_image, preferred_language")
+                .eq("id", p.user_id)
+                .maybeSingle();
+
+              if (profile) {
+                return {
+                  user_id: p.user_id,
+                  profiles: profile
+                };
+              }
+
+              // If no profile, check if it's a guest
+              const { data: guest } = await supabase
+                .from("guest_sessions")
+                .select("display_name, preferred_language")
+                .eq("id", p.user_id)
+                .maybeSingle();
+
+              if (guest) {
+                return {
+                  user_id: p.user_id,
+                  profiles: {
+                    name: guest.display_name,
+                    profile_image: null,
+                    preferred_language: guest.preferred_language
+                  }
+                };
+              }
+
+              // Fallback for unknown participants
+              return {
+                user_id: p.user_id,
+                profiles: {
+                  name: "Unknown User",
+                  profile_image: null,
+                  preferred_language: "en"
+                }
+              };
+            })
+          );
 
           // Get last message
           const { data: lastMessage } = await supabase
