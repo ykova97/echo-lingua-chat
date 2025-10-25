@@ -24,11 +24,19 @@ serve(async (req) => {
     const body = await req.json();
     console.log("Received request body:", body);
     
-    const { token, name, preferredLanguage = "en", baseUrl } = body;
+    const { token, name, preferredLanguage = "en", baseUrl } = body || {};
     console.log("Parsed values:", { token, name, preferredLanguage, baseUrl });
 
-    if (!token || !name) {
-      return new Response(JSON.stringify({ error: "token and name are required" }), {
+    // Validate token
+    if (!token || typeof token !== "string" || token.length < 10) {
+      return new Response(JSON.stringify({ error: "Invalid or missing token" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate name
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return new Response(JSON.stringify({ error: "Name is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -45,7 +53,7 @@ serve(async (req) => {
       .select("*")
       .eq("token", token)
       .gt("expires_at", new Date().toISOString())
-      .single();
+      .maybeSingle();
 
     console.log("Invite query result:", { invite, invErr });
     
