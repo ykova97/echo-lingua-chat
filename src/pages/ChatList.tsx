@@ -61,7 +61,7 @@ const ChatList = () => {
   useEffect(() => {
     if (currentUser) {
       
-      // Subscribe to new messages and read receipts for real-time updates
+      // Subscribe to new messages, read receipts, and chat participants for real-time updates
       const channel = supabase
         .channel('chat-list-updates')
         .on(
@@ -145,6 +145,20 @@ const ChatList = () => {
                   : chat
               )
             );
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_participants',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          async () => {
+            // New chat participant added for current user - reload chat list
+            console.log('New chat participant detected, reloading chats');
+            await loadChats();
           }
         )
         .subscribe();
