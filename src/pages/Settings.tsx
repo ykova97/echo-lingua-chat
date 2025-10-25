@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Globe, Camera, Mail, Phone, User } from "lucide-react";
 import { BlockedUsers } from "@/components/settings/BlockedUsers";
 import { Separator } from "@/components/ui/separator";
-import ProfileQRCode from "@/pages/Settings/ProfileQRCode";
 import ProfileQRCode from "@/components/settings/ProfileQRCode";
 
 
@@ -186,11 +185,6 @@ const Settings = () => {
   };
 
   return (
-    <div className="mt-6">
-  <h2 className="text-lg font-semibold mb-2">Invite with QR</h2>
-  <ProfileQRCode />
-</div>
-
     <div className="min-h-screen bg-background">
       <div className="container max-w-2xl mx-auto p-4">
         {/* Header */}
