@@ -133,6 +133,8 @@ serve(async (req) => {
     console.log("JWT secret loaded, length:", jwtSecret.length);
     
     try {
+      const expiresAt = new Date(Date.now() + (4 * 60 * 60 * 1000)); // 4 hours from now
+      
       const guestJwt = await new SignJWT({
         chat_id: chat.id,
         guest_session_id: guest.id,
@@ -141,7 +143,7 @@ serve(async (req) => {
         .setProtectedHeader({ alg: "HS256" })
         .setSubject(guest.id)
         .setIssuedAt()
-        .setExpirationTime(Math.floor(Date.now() / 1000) + (4 * 60 * 60))
+        .setExpirationTime(expiresAt)
         .sign(jwtSecret);
       
       console.log("JWT created successfully");
