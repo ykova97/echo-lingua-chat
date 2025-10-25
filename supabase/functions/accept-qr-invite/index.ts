@@ -122,7 +122,7 @@ serve(async (req) => {
       role: "guest",
     })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer(supabaseUrl)
+      .setIssuer(`${supabaseUrl}/auth/v1`)
       .setAudience("authenticated")
       .setIssuedAt()
       .setExpirationTime("4h")
