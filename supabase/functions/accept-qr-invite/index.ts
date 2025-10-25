@@ -101,8 +101,10 @@ serve(async (req) => {
       guest_session_id: guest.id,
     };
 
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(jwtSecret);
+    // Decode base64 JWT secret
+    const jwtSecretBase64 = jwtSecret.replace(/-/g, '+').replace(/_/g, '/');
+    const keyData = Uint8Array.from(atob(jwtSecretBase64), c => c.charCodeAt(0));
+    
     const cryptoKey = await crypto.subtle.importKey(
       "raw",
       keyData,
