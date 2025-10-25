@@ -17,3 +17,6 @@ cron = "*/15 * * * *"
 
 [functions.start-guest-chat]
 verify_jwt = false
+
+[functions.ping]
+verify_jwt = false
