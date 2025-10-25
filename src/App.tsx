@@ -15,6 +15,7 @@ const Chat = lazy(() => import("./pages/Chat"));
 const ComposeNewMessage = lazy(() => import("./pages/ComposeNewMessage"));
 const Settings = lazy(() => import("./pages/Settings"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const InternalRunbook = lazy(() => import("./pages/InternalRunbook"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/compose" element={<ComposeNewMessage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/internal/runbook" element={<InternalRunbook />} />
             <Route path="/guest/:token" element={<GuestJoin />} />
             <Route path="/guest-chat/:chatId" element={<GuestChat />} />
 
