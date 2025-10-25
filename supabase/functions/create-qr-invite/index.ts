@@ -56,6 +56,9 @@ serve(async (req) => {
 
     // The correct invite link for guests
     const inviteUrl = `${baseUrl.replace(/\/$/, "")}/guest/${data.token}`;
+    
+    console.log("Generated invite URL:", inviteUrl);
+    console.log("Base URL used:", baseUrl);
 
     return new Response(JSON.stringify({ inviteUrl, token: data.token, expiresAt: data.expires_at }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
