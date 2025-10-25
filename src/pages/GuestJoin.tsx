@@ -15,10 +15,8 @@ const LANGS = [
   { code: "ru", label: "Russian" },
 ];
 
-// Optionally set in env; otherwise use Lovable default
-const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
-// Optional PUBLIC app URL (useful if app sits behind a proxy/different host)
-const PUBLIC_APP_URL = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const PUBLIC_APP_URL = window.location.origin;
 
 export default function GuestJoin() {
   const { token } = useParams();
@@ -40,14 +38,14 @@ export default function GuestJoin() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${FUNCTION_BASE}/accept-qr-invite`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/accept-qr-invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
           name: name.trim(),
           preferredLanguage: lang,
-          baseUrl: PUBLIC_APP_URL, // REQUIRED by your function
+          baseUrl: PUBLIC_APP_URL,
         }),
       });
 
