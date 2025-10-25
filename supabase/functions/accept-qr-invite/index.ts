@@ -16,7 +16,11 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false }});
 
-    const { token, name, preferredLanguage = "en", baseUrl } = await req.json();
+    const body = await req.json();
+    console.log("Received request body:", body);
+    
+    const { token, name, preferredLanguage = "en", baseUrl } = body;
+    console.log("Parsed values:", { token, name, preferredLanguage, baseUrl });
 
     if (!token || !name) {
       return new Response(JSON.stringify({ error: "token and name are required" }), {
@@ -30,6 +34,7 @@ serve(async (req) => {
       });
     }
 
+    console.log("Querying guest_invites with token:", token);
     const { data: invite, error: invErr } = await supabase
       .from("guest_invites")
       .select("*")
@@ -37,7 +42,10 @@ serve(async (req) => {
       .gt("expires_at", new Date().toISOString())
       .single();
 
+    console.log("Invite query result:", { invite, invErr });
+    
     if (invErr || !invite) {
+      console.error("Invite lookup failed:", invErr);
       return new Response(JSON.stringify({ error: "Invalid or expired invite" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
