@@ -23,12 +23,17 @@ serve(async (req) => {
     }
 
     // Use baseUrl from request or fall back to PUBLIC_APP_URL secret
-    const baseUrl = body?.baseUrl || Deno.env.get("PUBLIC_APP_URL");
+    let baseUrl = body?.baseUrl || Deno.env.get("PUBLIC_APP_URL");
     
     if (!baseUrl) {
       return new Response(JSON.stringify({ error: "baseUrl or PUBLIC_APP_URL must be configured" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Ensure baseUrl has protocol
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
     }
 
     const supabase = createClient(
