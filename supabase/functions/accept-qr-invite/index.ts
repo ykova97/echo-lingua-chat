@@ -22,13 +22,14 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false }});
 
     const body = await req.json();
-    console.log("Received request body:", body);
+    console.log("Received request body:", JSON.stringify(body));
     
     const { token, name, preferredLanguage = "en", baseUrl } = body || {};
-    console.log("Parsed values:", { token, name, preferredLanguage, baseUrl });
+    console.log("Parsed values:", JSON.stringify({ token, name, preferredLanguage, baseUrl }));
 
     // Validate token
     if (!token || typeof token !== "string" || token.length < 10) {
+      console.error("Token validation failed:", { token, type: typeof token, length: token?.length });
       return new Response(JSON.stringify({ error: "Invalid or missing token" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -36,12 +37,14 @@ serve(async (req) => {
 
     // Validate name
     if (!name || typeof name !== "string" || name.trim().length === 0) {
+      console.error("Name validation failed:", { name, type: typeof name });
       return new Response(JSON.stringify({ error: "Name is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (!baseUrl) {
+      console.error("BaseUrl validation failed");
       return new Response(JSON.stringify({ error: "baseUrl is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -55,7 +58,7 @@ serve(async (req) => {
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
-    console.log("Invite query result:", { invite, invErr });
+    console.log("Invite query result:", JSON.stringify({ invite, invErr }));
     
     if (invErr || !invite) {
       console.error("Invite lookup failed:", invErr);
@@ -70,6 +73,7 @@ serve(async (req) => {
       });
     }
 
+    console.log("Creating guest session...");
     const { data: guest, error: gErr } = await supabase
       .from("guest_sessions")
       .insert({
@@ -79,9 +83,14 @@ serve(async (req) => {
       })
       .select("*").single();
 
-    if (gErr) throw gErr;
+    if (gErr) {
+      console.error("Guest session creation failed:", JSON.stringify(gErr));
+      throw gErr;
+    }
+    console.log("Guest session created:", guest.id);
 
     const deleteAfter = new Date(Date.now() + 6 * 3600_000).toISOString();
+    console.log("Creating ephemeral chat...");
     const { data: chat, error: cErr } = await supabase
       .from("chats")
       .insert({
@@ -93,51 +102,65 @@ serve(async (req) => {
       })
       .select("id").single();
 
-    if (cErr) throw cErr;
+    if (cErr) {
+      console.error("Chat creation failed:", JSON.stringify(cErr));
+      throw cErr;
+    }
+    console.log("Chat created:", chat.id);
 
+    console.log("Adding chat participants...");
     await supabase.from("chat_participants").insert([
       { chat_id: chat.id, user_id: invite.inviter_id },
       { chat_id: chat.id, user_id: guest.id },
     ]);
 
+    console.log("Updating invite used count...");
     await supabase
       .from("guest_invites")
       .update({ used_count: invite.used_count + 1 })
       .eq("id", invite.id);
 
     // Create JWT using jose library
-    console.log("Creating guest JWT for chat:", chat.id, "guest:", guest.id);
+    console.log("Creating guest JWT...");
     
     const jwtSecretString = Deno.env.get("GUEST_JWT_SECRET");
     if (!jwtSecretString) {
+      console.error("GUEST_JWT_SECRET not found");
       throw new Error("GUEST_JWT_SECRET not configured");
     }
     
     const jwtSecret = new TextEncoder().encode(jwtSecretString);
-    console.log("JWT secret length:", jwtSecret.length);
+    console.log("JWT secret loaded, length:", jwtSecret.length);
     
-    const guestJwt = await new SignJWT({
-      chat_id: chat.id,
-      guest_session_id: guest.id,
-      role: "guest",
-    })
-      .setProtectedHeader({ alg: "HS256" })
-      .setIssuedAt()
-      .setExpirationTime("4h")
-      .sign(jwtSecret);
-    
-    console.log("JWT created successfully");
+    try {
+      const guestJwt = await new SignJWT({
+        chat_id: chat.id,
+        guest_session_id: guest.id,
+        role: "guest",
+      })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("4h")
+        .sign(jwtSecret);
+      
+      console.log("JWT created successfully");
 
-    const guestChatUrl = `${baseUrl.replace(/\/$/, "")}/guest-chat/${chat.id}`;
+      const guestChatUrl = `${baseUrl.replace(/\/$/, "")}/guest-chat/${chat.id}`;
+      console.log("Guest chat URL:", guestChatUrl);
 
-    return new Response(JSON.stringify({
-      chatId: chat.id,
-      guestJwt,
-      guest: { id: guest.id, name: guest.display_name, lang: guest.preferred_language },
-      url: guestChatUrl,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      return new Response(JSON.stringify({
+        chatId: chat.id,
+        guestJwt,
+        guest: { id: guest.id, name: guest.display_name, lang: guest.preferred_language },
+        url: guestChatUrl,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (jwtError) {
+      console.error("JWT creation error:", jwtError);
+      const errorMsg = jwtError instanceof Error ? jwtError.message : String(jwtError);
+      throw new Error(`JWT creation failed: ${errorMsg}`);
+    }
   } catch (e) {
     console.error("accept-qr-invite error:", e);
     const errorMessage = e instanceof Error ? e.message : "Internal error";
