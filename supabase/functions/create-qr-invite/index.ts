@@ -13,7 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { inviterId, ttlHours = 24, maxUses = 1, baseUrl } = await req.json();
+    const body = await req.json();
+    const { inviterId, ttlHours = 24, maxUses = 1 } = body;
 
     if (!inviterId) {
       return new Response(JSON.stringify({ error: "inviterId required" }), {
@@ -21,8 +22,11 @@ serve(async (req) => {
       });
     }
 
+    // Use baseUrl from request or fall back to PUBLIC_APP_URL secret
+    const baseUrl = body?.baseUrl || Deno.env.get("PUBLIC_APP_URL");
+    
     if (!baseUrl) {
-      return new Response(JSON.stringify({ error: "baseUrl required" }), {
+      return new Response(JSON.stringify({ error: "baseUrl or PUBLIC_APP_URL must be configured" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -33,7 +37,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const token = nanoid(24);
+    const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + ttlHours * 3600_000).toISOString();
 
     const { data, error } = await supabase.from("guest_invites").insert({
@@ -45,6 +49,7 @@ serve(async (req) => {
 
     if (error) throw error;
 
+    // The correct invite link for guests
     const inviteUrl = `${baseUrl.replace(/\/$/, "")}/guest/${data.token}`;
 
     return new Response(JSON.stringify({ inviteUrl, token: data.token, expiresAt: data.expires_at }), {
