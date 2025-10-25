@@ -26,7 +26,8 @@ export default function ProfileQRCode() {
       return;
     }
 
-    const baseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "") || "";
+    // Use the current app URL, not the Supabase URL
+    const baseUrl = window.location.origin;
     const url = `${baseUrl}/join/${profile.qr_slug}`;
     setQrSlug(profile.qr_slug);
     setJoinUrl(url);
@@ -43,9 +44,11 @@ export default function ProfileQRCode() {
 
       if (error) throw error;
 
-      if (data?.qrSlug && data?.joinUrl) {
+      if (data?.qrSlug) {
+        const baseUrl = window.location.origin;
+        const url = `${baseUrl}/join/${data.qrSlug}`;
         setQrSlug(data.qrSlug);
-        setJoinUrl(data.joinUrl);
+        setJoinUrl(url);
         toast.success("QR code rotated successfully");
       }
     } catch (err) {
