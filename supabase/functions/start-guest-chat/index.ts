@@ -47,45 +47,87 @@ serve(async (req) => {
 
     console.log("Found inviter profile:", inviterProfile.id, inviterProfile.name);
 
-    // Rate limiting check
-    const minuteBucket = new Date();
-    minuteBucket.setSeconds(0, 0); // Truncate to minute
-    const minuteBucketStr = minuteBucket.toISOString();
+    // Check if we should reuse an existing ephemeral chat
+    const reuseEnabled = Deno.env.get("REUSE_GUEST_CHAT") === "true";
+    let existingChatId: string | null = null;
 
-    // Check current rate limit
-    const { data: rateLimit, error: rateLimitError } = await supabase
-      .from("qr_rate_limits")
-      .select("count")
-      .eq("inviter_id", inviterProfile.id)
-      .eq("minute_bucket", minuteBucketStr)
-      .maybeSingle();
+    if (reuseEnabled) {
+      console.log("Chat reuse is enabled, checking for existing ephemeral chats");
+      
+      // Find an existing ephemeral chat created by this inviter that's still valid
+      const { data: existingChats, error: existingError } = await supabase
+        .from("chats")
+        .select("id")
+        .eq("created_by", inviterProfile.id)
+        .eq("is_ephemeral", true)
+        .gt("delete_after", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-    if (rateLimit && rateLimit.count >= 5) {
-      console.warn("Rate limit exceeded for inviter:", inviterProfile.id);
-      return new Response(
-        JSON.stringify({ 
-          error: "Too many requests. Please wait a moment before creating another chat.",
-          retryAfter: 60 
-        }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (!existingError && existingChats && existingChats.length > 0) {
+        // Check each chat to find one with exactly 2 participants (inviter + 1 guest)
+        for (const chat of existingChats) {
+          const { data: participants, error: participantsError } = await supabase
+            .from("chat_participants")
+            .select("user_id")
+            .eq("chat_id", chat.id);
+
+          if (!participantsError && participants && participants.length === 2) {
+            // Verify one is the inviter
+            const hasInviter = participants.some(p => p.user_id === inviterProfile.id);
+            const nonInviterCount = participants.filter(p => p.user_id !== inviterProfile.id).length;
+            
+            if (hasInviter && nonInviterCount === 1) {
+              existingChatId = chat.id;
+              console.log("Found reusable chat:", existingChatId);
+              break;
+            }
+          }
+        }
+      }
     }
 
-    // Update rate limit counter
-    if (rateLimit) {
-      await supabase
+    // Rate limiting check (only if creating a new chat)
+    if (!existingChatId) {
+      const minuteBucket = new Date();
+      minuteBucket.setSeconds(0, 0); // Truncate to minute
+      const minuteBucketStr = minuteBucket.toISOString();
+
+      // Check current rate limit
+      const { data: rateLimit, error: rateLimitError } = await supabase
         .from("qr_rate_limits")
-        .update({ count: rateLimit.count + 1 })
+        .select("count")
         .eq("inviter_id", inviterProfile.id)
-        .eq("minute_bucket", minuteBucketStr);
-    } else {
-      await supabase
-        .from("qr_rate_limits")
-        .insert({
-          inviter_id: inviterProfile.id,
-          minute_bucket: minuteBucketStr,
-          count: 1,
-        });
+        .eq("minute_bucket", minuteBucketStr)
+        .maybeSingle();
+
+      if (rateLimit && rateLimit.count >= 5) {
+        console.warn("Rate limit exceeded for inviter:", inviterProfile.id);
+        return new Response(
+          JSON.stringify({ 
+            error: "Too many requests. Please wait a moment before creating another chat.",
+            retryAfter: 60 
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update rate limit counter
+      if (rateLimit) {
+        await supabase
+          .from("qr_rate_limits")
+          .update({ count: rateLimit.count + 1 })
+          .eq("inviter_id", inviterProfile.id)
+          .eq("minute_bucket", minuteBucketStr);
+      } else {
+        await supabase
+          .from("qr_rate_limits")
+          .insert({
+            inviter_id: inviterProfile.id,
+            minute_bucket: minuteBucketStr,
+            count: 1,
+          });
+      }
     }
 
     // Optional CAPTCHA check (placeholder for future implementation)
@@ -117,44 +159,57 @@ serve(async (req) => {
 
     console.log("Created guest session:", guestSessionId);
 
-    // 3) Create ephemeral chat
-    const deleteAfter = new Date(Date.now() + inviterProfile.max_guest_hours * 3600_000);
+    // 3) Create or reuse ephemeral chat
+    let chatId: string;
+    
+    if (existingChatId) {
+      chatId = existingChatId;
+      console.log("Reusing existing ephemeral chat:", chatId);
+    } else {
+      const deleteAfter = new Date(Date.now() + inviterProfile.max_guest_hours * 3600_000);
 
-    const { data: chat, error: chatError } = await supabase
-      .from("chats")
-      .insert({
-        type: "direct",
-        is_ephemeral: true,
-        delete_after: deleteAfter.toISOString(),
-        created_by: inviterProfile.id,
-        name: `${name} ↔ Invite`,
-      })
-      .select("id")
-      .single();
+      const { data: chat, error: chatError } = await supabase
+        .from("chats")
+        .insert({
+          type: "direct",
+          is_ephemeral: true,
+          delete_after: deleteAfter.toISOString(),
+          created_by: inviterProfile.id,
+          name: `${name} ↔ Invite`,
+        })
+        .select("id")
+        .single();
 
-    if (chatError || !chat) {
-      console.error("Failed to create chat:", chatError);
-      throw chatError;
+      if (chatError || !chat) {
+        console.error("Failed to create chat:", chatError);
+        throw chatError;
+      }
+
+      chatId = chat.id;
+      console.log("Created ephemeral chat:", chatId);
+
+      // Add inviter as participant only for new chats
+      const { error: inviterError } = await supabase
+        .from("chat_participants")
+        .insert({ chat_id: chatId, user_id: inviterProfile.id });
+
+      if (inviterError) {
+        console.error("Failed to add inviter:", inviterError);
+        throw inviterError;
+      }
     }
 
-    console.log("Created ephemeral chat:", chat.id);
-
-    // 4) Insert two participants
-    const participants = [
-      { chat_id: chat.id, user_id: inviterProfile.id },
-      { chat_id: chat.id, user_id: guestSessionId },
-    ];
-
-    const { error: participantsError } = await supabase
+    // 4) Add guest as participant
+    const { error: guestParticipantError } = await supabase
       .from("chat_participants")
-      .insert(participants);
+      .insert({ chat_id: chatId, user_id: guestSessionId });
 
-    if (participantsError) {
-      console.error("Failed to add participants:", participantsError);
-      throw participantsError;
+    if (guestParticipantError) {
+      console.error("Failed to add guest participant:", guestParticipantError);
+      throw guestParticipantError;
     }
 
-    console.log("Added participants to chat");
+    console.log("Added guest participant to chat");
 
     // 5) Mint guest JWT
     const jwtSecret = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("GUEST_JWT_SECRET") || "";
@@ -163,7 +218,7 @@ serve(async (req) => {
       aud: "authenticated",
       role: "authenticated",
       exp: getNumericDate(60 * 60 * 4), // 4 hours
-      chat_id: chat.id,
+      chat_id: chatId,
       guest_session_id: guestSessionId,
     };
 
@@ -183,7 +238,7 @@ serve(async (req) => {
     // 6) Return response
     return new Response(
       JSON.stringify({
-        chatId: chat.id,
+        chatId,
         guestJwt,
         guest: {
           name,
