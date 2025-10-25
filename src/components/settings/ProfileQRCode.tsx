@@ -8,43 +8,45 @@ export default function ProfileQRCode() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        setErrorMsg("");
+  const generateQRCode = async () => {
+    try {
+      setLoading(true);
+      setErrorMsg("");
 
-        // Get current user from Supabase auth
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError || !user) {
-          setErrorMsg("Please sign in to generate QR code.");
-          setLoading(false);
-          return;
-        }
-
-        // Call the edge function to create the invite
-        const { data, error } = await supabase.functions.invoke('create-qr-invite', {
-          body: { 
-            inviterId: user.id, 
-            ttlHours: 24, 
-            maxUses: 5
-          }
-        });
-
-        if (error) {
-          throw new Error(error.message || "Failed to create invite");
-        }
-        
-        if (data?.inviteUrl) {
-          setInviteUrl(data.inviteUrl);
-        }
-      } catch (err: any) {
-        setErrorMsg(err?.message || "Failed to create invite.");
-      } finally {
+      // Get current user from Supabase auth
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        setErrorMsg("Please sign in to generate QR code.");
         setLoading(false);
+        return;
       }
-    })();
+
+      // Call the edge function to create the invite
+      const { data, error } = await supabase.functions.invoke('create-qr-invite', {
+        body: { 
+          inviterId: user.id, 
+          ttlHours: 24, 
+          maxUses: 5
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to create invite");
+      }
+      
+      if (data?.inviteUrl) {
+        setInviteUrl(data.inviteUrl);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to create invite.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    generateQRCode();
   }, []);
 
   if (loading) return <div className="text-sm text-muted-foreground">Generating QR…</div>;
@@ -58,6 +60,9 @@ export default function ProfileQRCode() {
       <div className="flex gap-2">
         <Button variant="outline" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
           Copy link
+        </Button>
+        <Button variant="outline" onClick={generateQRCode} disabled={loading}>
+          {loading ? "Regenerating..." : "Regenerate"}
         </Button>
         <Button
           onClick={() => {
