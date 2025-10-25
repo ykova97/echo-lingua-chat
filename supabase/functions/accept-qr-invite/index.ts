@@ -108,9 +108,9 @@ serve(async (req) => {
     // Create JWT using jose library
     console.log("Creating guest JWT for chat:", chat.id, "guest:", guest.id);
     
-    const jwtSecretString = Deno.env.get("SUPABASE_JWT_SECRET");
+    const jwtSecretString = Deno.env.get("GUEST_JWT_SECRET");
     if (!jwtSecretString) {
-      throw new Error("SUPABASE_JWT_SECRET not configured");
+      throw new Error("GUEST_JWT_SECRET not configured");
     }
     
     const jwtSecret = new TextEncoder().encode(jwtSecretString);
@@ -122,8 +122,6 @@ serve(async (req) => {
       role: "guest",
     })
       .setProtectedHeader({ alg: "HS256" })
-      .setIssuer(`${supabaseUrl}/auth/v1`)
-      .setAudience("authenticated")
       .setIssuedAt()
       .setExpirationTime("4h")
       .sign(jwtSecret);
