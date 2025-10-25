@@ -53,7 +53,13 @@ export default function GuestChat() {
 
   const send = async () => {
     if (!text.trim() || !client || !chatId) return;
-    await client.from("messages").insert({ chat_id: chatId, original_text: text, source_language: "auto" });
+    const guestSessionId = sessionStorage.getItem("guestChatId");
+    await client.from("messages").insert({ 
+      chat_id: chatId, 
+      sender_id: guestSessionId || chatId, // Use guest session ID as sender
+      original_text: text, 
+      source_language: "auto" 
+    });
     setText("");
     setTimeout(() => scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 0);
   };
@@ -61,7 +67,8 @@ export default function GuestChat() {
   useEffect(() => {
     const onUnload = () => {
       if (!chatId) return;
-      fetch("/functions/v1/guest-close", {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      fetch(`${supabaseUrl}/functions/v1/guest-close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ chatId, minutes: 5 }),
