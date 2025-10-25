@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const LANGS = [
   { code: "en", label: "English" },
@@ -15,6 +14,11 @@ const LANGS = [
   { code: "pt", label: "Portuguese" },
   { code: "ru", label: "Russian" },
 ];
+
+// Optionally set in env; otherwise use Lovable default
+const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+// Optional PUBLIC app URL (useful if app sits behind a proxy/different host)
+const PUBLIC_APP_URL = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
 
 export default function GuestJoin() {
   const { token } = useParams();
@@ -30,30 +34,33 @@ export default function GuestJoin() {
       return;
     }
     if (!token) {
-      toast({ title: "Invalid invite", description: "Missing or invalid invite token.", variant: "destructive" });
+      toast({ title: "Invalid invite", description: "Missing invite token.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('accept-qr-invite', {
-        body: {
+      const res = await fetch(`${FUNCTION_BASE}/accept-qr-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           token,
           name: name.trim(),
           preferredLanguage: lang,
-          baseUrl: window.location.origin
-        }
+          baseUrl: PUBLIC_APP_URL, // REQUIRED by your function
+        }),
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to accept invite");
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(`accept-qr-invite failed (${res.status}): ${t}`);
       }
 
+      const data = await res.json();
       if (!data?.guestJwt || !data?.chatId) {
-        throw new Error("Missing guestJwt or chatId from server response.");
+        throw new Error("Missing guestJwt or chatId");
       }
 
-      // Persist for the guest-only session
       sessionStorage.setItem("guestJwt", data.guestJwt);
       sessionStorage.setItem("guestChatId", data.chatId);
       sessionStorage.setItem("guestName", name.trim());

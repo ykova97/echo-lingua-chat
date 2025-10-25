@@ -1,102 +1,180 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { createClient } from "@supabase/supabase-js";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import MessageBubble from "@/components/chat/MessageBubble";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+
+interface Message {
+  id: string;
+  sender_id: string;
+  sender_name?: string;
+  sender_image?: string;
+  original_text: string;
+  translated_text?: string;
+  source_language: string;
+  created_at: string;
+}
 
 export default function GuestChat() {
-  const { chatId: routeChatId } = useParams();
+  const { chatId } = useParams();
   const navigate = useNavigate();
-  const [client, setClient] = useState<any>(null);
-  const [chatId, setChatId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [text, setText] = useState("");
+  const { toast } = useToast();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Helper: guest info
+  const guestJwt = sessionStorage.getItem("guestJwt") || "";
+  const guestName = sessionStorage.getItem("guestName") || "Guest";
+
+  // Auto-scroll to bottom when messages update
   useEffect(() => {
-    const guestJwt = sessionStorage.getItem("guestJwt") || "";
-    const storedChatId = sessionStorage.getItem("guestChatId") || routeChatId || "";
-    if (!guestJwt || !storedChatId) {
-      navigate("/");
-      return;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+  }, [messages]);
 
-    const c = createClient(
-      import.meta.env.VITE_SUPABASE_URL!,
-      import.meta.env.VITE_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${guestJwt}` } } }
-    );
-
-    setClient(c);
-    setChatId(storedChatId);
-
-    (async () => {
-      const { data } = await c
-        .from("messages")
-        .select("*")
-        .eq("chat_id", storedChatId)
-        .order("created_at", { ascending: true });
-      setMessages(data || []);
-
-      const ch = c
-        .channel(`guest:${storedChatId}`)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `chat_id=eq.${storedChatId}` },
-          (payload) => setMessages((prev) => [...prev, payload.new])
-        )
-        .subscribe();
-
-      return () => { c.removeChannel(ch); };
-    })();
-  }, [routeChatId, navigate]);
-
-  const send = async () => {
-    if (!text.trim() || !client || !chatId) return;
-    const guestSessionId = sessionStorage.getItem("guestChatId");
-    await client.from("messages").insert({ 
-      chat_id: chatId, 
-      sender_id: guestSessionId || chatId, // Use guest session ID as sender
-      original_text: text, 
-      source_language: "auto" 
-    });
-    setText("");
-    setTimeout(() => scrollRef.current?.scrollTo({ top: 9e9, behavior: "smooth" }), 0);
-  };
-
+  // Load initial messages (mocked simple fetch – adjust if you use Realtime DB)
   useEffect(() => {
-    const onUnload = () => {
-      if (!chatId) return;
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      fetch(`${supabaseUrl}/functions/v1/guest-close`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatId, minutes: 5 }),
-        keepalive: true,
-      }).catch(() => {});
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`/functions/v1/load-chat-messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ chatId }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setMessages(data.messages || []);
+      } catch (err) {
+        console.error("Error loading messages:", err);
+        toast({
+          title: "Load error",
+          description: "Unable to load messages.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
-    window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
+    if (chatId) fetchMessages();
   }, [chatId]);
 
+  // Send message handler
+  const handleSend = async () => {
+    if (!newMessage.trim() || !chatId) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/functions/v1/send-guest-message`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId,
+          message: newMessage.trim(),
+          name: guestName,
+          jwt: guestJwt,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      // Optimistic append
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data.id || Date.now().toString(),
+          sender_id: "guest",
+          original_text: newMessage.trim(),
+          source_language: "auto",
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setNewMessage("");
+    } catch (err) {
+      console.error("Send failed:", err);
+      toast({
+        title: "Message failed",
+        description: "Could not send your message.",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Notify backend on tab close (guest-close)
+  useEffect(() => {
+    const handleUnload = async () => {
+      try {
+        if (!chatId) return;
+        await fetch(`${FUNCTION_BASE}/guest-close`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId }),
+        });
+      } catch (error) {
+        console.error("Error calling guest-close:", error);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [chatId]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading chat…</div>;
+  }
+
   return (
-    <div className="min-h-[100dvh] flex flex-col">
-      <header className="p-3 border-b">Temporary chat</header>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
-        {messages.map((m) => (
-          <div key={m.id} className="rounded-lg p-2 bg-secondary">
-            {m.original_text}
-          </div>
-        ))}
-      </div>
-      <div className="p-3 border-t flex gap-2">
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message…"
-          onKeyDown={(e) => (e.key === "Enter" && send())}
-        />
-        <Button onClick={send}>Send</Button>
+    <div className="flex flex-col h-screen">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 p-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-lg font-semibold truncate">Chat with Host</h1>
+      </header>
+
+      {/* Scrollable Message Area */}
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="space-y-4 pb-24">
+          {messages.map((msg) => (
+            <MessageBubble
+              key={msg.id}
+              message={msg}
+              isOwn={msg.sender_id === "guest"}
+              showOriginal={false}
+              currentUserId="guest"
+              onToggleOriginal={() => {}}
+            />
+          ))}
+        </div>
+      </ScrollArea>
+
+      {/* Sticky Input */}
+      <div className="sticky bottom-0 border-t bg-background p-3">
+        <div className="flex gap-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type your message…"
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          />
+          <Button size="icon" onClick={handleSend} disabled={sending}>
+            <Send className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
     </div>
   );

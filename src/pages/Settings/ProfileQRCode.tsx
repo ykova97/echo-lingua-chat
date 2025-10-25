@@ -1,113 +1,117 @@
 import { useEffect, useState } from "react";
-import QRCode from "react-qr-code";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import QRCode from "qrcode.react";
+
+const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const PUBLIC_APP_URL = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
 
 export default function ProfileQRCode() {
+  const { toast } = useToast();
   const [inviteUrl, setInviteUrl] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
+  // Fetch the user’s invite link when the page loads
   useEffect(() => {
-    generateQRCode();
+    generateInvite();
   }, []);
 
-  const generateQRCode = async () => {
+  const generateInvite = async () => {
     try {
       setLoading(true);
-      setError("");
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError("User not authenticated");
+      setErrorMsg("");
+
+      // Attempt to get the logged-in user ID (Lovable uses the same Supabase-style auth)
+      const userRaw = localStorage.getItem("currentUser");
+      const user = userRaw ? JSON.parse(userRaw) : null;
+      const inviterId = user?.id;
+
+      if (!inviterId) {
+        setErrorMsg("User not authenticated. Please sign in.");
+        setLoading(false);
         return;
       }
 
-      console.log("Generating QR invite for user:", user.id);
-
-      const { data, error: invokeError } = await supabase.functions.invoke("create-qr-invite", {
-        body: { inviterId: user.id, ttlHours: 24, maxUses: 5 }
+      const res = await fetch(`${FUNCTION_BASE}/create-qr-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          inviterId,
+          ttlHours: 24,
+          maxUses: 5,
+          baseUrl: PUBLIC_APP_URL, // required by function
+        }),
       });
 
-      if (invokeError) {
-        console.error("Error creating invite:", invokeError);
-        setError("Failed to generate invite");
-        toast.error("Failed to generate QR code");
-        return;
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`create-qr-invite failed (${res.status}): ${text}`);
       }
 
-      if (data?.inviteUrl) {
-        setInviteUrl(data.inviteUrl);
-        console.log("Invite URL generated:", data.inviteUrl);
-      } else {
-        setError("No invite URL returned");
-      }
-    } catch (err) {
-      console.error("Unexpected error generating QR code:", err);
-      setError("Failed to generate invite");
-      toast.error("An error occurred");
+      const data = await res.json();
+      if (!data?.inviteUrl) throw new Error("No inviteUrl returned from API");
+      setInviteUrl(data.inviteUrl);
+    } catch (err: any) {
+      console.error("QR generation error:", err);
+      setErrorMsg(err.message || "Failed to generate QR invite");
+      toast({
+        title: "Error",
+        description: err.message || "Could not create QR code invite",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const copyToClipboard = () => {
+  const copyLink = () => {
+    if (!inviteUrl) return;
     navigator.clipboard.writeText(inviteUrl);
-    toast.success("Link copied to clipboard");
+    toast({ title: "Copied", description: "Invite link copied to clipboard" });
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Guest Invite QR Code</CardTitle>
-          <CardDescription>Generate a QR code for guests to join</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error || !inviteUrl) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Guest Invite QR Code</CardTitle>
-          <CardDescription>Generate a QR code for guests to join</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-destructive">{error || "Failed to generate invite"}</p>
-          <Button onClick={generateQRCode}>Try Again</Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  const shareLink = async () => {
+    if (!inviteUrl) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Link Invite",
+          text: "Join my chat instantly:",
+          url: inviteUrl,
+        });
+      } else {
+        copyLink();
+      }
+    } catch {
+      copyLink();
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Guest Invite QR Code</CardTitle>
-        <CardDescription>
-          Valid for 24 hours, up to 5 guests. Each guest gets their own temporary chat.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center gap-4">
-        <div className="bg-white p-4 rounded-lg">
+    <div className="flex flex-col items-center gap-4 py-6">
+      <h2 className="text-lg font-semibold">Your QR Invite</h2>
+
+      {loading && <div className="text-sm text-muted-foreground">Generating QR…</div>}
+      {errorMsg && <div className="text-sm text-red-500">{errorMsg}</div>}
+
+      {!loading && !errorMsg && inviteUrl && (
+        <>
           <QRCode value={inviteUrl} size={220} />
-        </div>
-        <div className="text-xs break-all text-muted-foreground max-w-full px-2 text-center">
-          {inviteUrl}
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={copyToClipboard}>Copy Link</Button>
-          <Button variant="outline" onClick={generateQRCode}>Generate New</Button>
-        </div>
-      </CardContent>
-    </Card>
+          <p className="text-xs text-muted-foreground break-all max-w-[90%] text-center">{inviteUrl}</p>
+
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" onClick={copyLink}>
+              Copy Link
+            </Button>
+            <Button onClick={shareLink}>Share</Button>
+          </div>
+
+          <p className="text-[12px] text-muted-foreground text-center mt-4">
+            Anyone can scan this QR to start a temporary chat with you.
+          </p>
+        </>
+      )}
+    </div>
   );
 }
