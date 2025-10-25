@@ -15,8 +15,8 @@ const LANGS = [
   { code: "ru", label: "Russian" },
 ];
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const PUBLIC_APP_URL = window.location.origin;
+const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const ORIGIN = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
 
 export default function GuestJoin() {
   const { token } = useParams();
@@ -38,16 +38,16 @@ export default function GuestJoin() {
 
     setLoading(true);
     try {
-      console.log("Calling accept-qr-invite with:", { token, name: name.trim(), preferredLanguage: lang, baseUrl: SUPABASE_URL });
+      console.log("Calling accept-qr-invite with:", { token, name: name.trim(), preferredLanguage: lang, baseUrl: ORIGIN });
       
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/accept-qr-invite`, {
+      const res = await fetch(`${BASE}/accept-qr-invite`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
           name: name.trim(),
           preferredLanguage: lang,
-          baseUrl: PUBLIC_APP_URL,
+          baseUrl: ORIGIN,
         }),
       });
 

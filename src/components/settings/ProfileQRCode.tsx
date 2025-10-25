@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import QRCode from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 
+const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const ORIGIN = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
+
 export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -23,18 +26,23 @@ export default function ProfileQRCode() {
       }
 
       // Call the edge function to create the invite
-      const { data, error } = await supabase.functions.invoke('create-qr-invite', {
-        body: { 
+      const res = await fetch(`${BASE}/create-qr-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
           inviterId: user.id, 
           ttlHours: 24, 
-          maxUses: 5
-        }
+          maxUses: 5,
+          baseUrl: ORIGIN
+        })
       });
 
-      if (error) {
-        throw new Error(error.message || "Failed to create invite");
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to create invite");
       }
       
+      const data = await res.json();
       if (data?.inviteUrl) {
         setInviteUrl(data.inviteUrl);
       }

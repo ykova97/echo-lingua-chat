@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+
+const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send } from "lucide-react";
@@ -259,15 +261,20 @@ const Chat = () => {
     setNewMessage("");
 
     try {
-      const { error } = await supabase.functions.invoke("translate-message", {
-        body: {
+      const res = await fetch(`${BASE}/translate-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           chatId: chatId,
           message: messageText,
           sourceLanguage: currentUser.preferred_language || "en",
-        },
+        })
       });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
+      }
       
       setTimeout(() => {
         if (scrollRef.current) {

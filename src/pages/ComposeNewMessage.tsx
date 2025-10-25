@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+
+const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
 import { RecipientInput } from "@/components/compose/RecipientInput";
 import { ContactSuggestions } from "@/components/compose/ContactSuggestions";
 import { MessageComposer } from "@/components/compose/MessageComposer";
@@ -164,19 +166,22 @@ const ComposeNewMessage = () => {
 
       // Send initial message via Edge Function
       if (message.trim()) {
-        const { error: sendErr } = await supabase.functions.invoke("translate-message", {
-          body: {
+        const res = await fetch(`${BASE}/translate-message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             chatId,
             message,
             sourceLanguage: currentUser.preferred_language || "auto",
             replyToId: null,
             attachmentUrl: null,
             attachmentType: null,
-          },
+          })
         });
 
-        if (sendErr) {
-          console.error("Message send error:", sendErr);
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Message send error:", errorText);
           toast({
             title: "Message not sent",
             description: "Chat created but sending failed. Try again.",

@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const ORIGIN = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
 
 interface Message {
   id: string;
@@ -45,7 +46,7 @@ export default function GuestChat() {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`/functions/v1/load-chat-messages`, {
+        const res = await fetch(`${BASE}/load-chat-messages`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -74,7 +75,7 @@ export default function GuestChat() {
     if (!newMessage.trim() || !chatId) return;
     setSending(true);
     try {
-      const res = await fetch(`/functions/v1/send-guest-message`, {
+      const res = await fetch(`${BASE}/send-guest-message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,7 +119,7 @@ export default function GuestChat() {
     const handleUnload = async () => {
       try {
         if (!chatId) return;
-        await fetch(`${FUNCTION_BASE}/guest-close`, {
+        await fetch(`${BASE}/guest-close`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ chatId }),
