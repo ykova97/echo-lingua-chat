@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import QRCode from "qrcode.react";
 
 const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
-const PUBLIC_APP_URL = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
+const PUBLIC_APP_URL = "https://lynk-chat.com";
 
 export default function ProfileQRCode() {
   const { toast } = useToast();
