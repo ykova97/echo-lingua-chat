@@ -13,8 +13,9 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET")!;
-    const baseUrl = Deno.env.get("PUBLIC_APP_URL")!;
+    // Use SUPABASE_ANON_KEY as JWT signing secret since custom secrets aren't exposed to edge functions
+    const jwtSecret = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("GUEST_JWT_SECRET") || "";
+    const baseUrl = Deno.env.get("PUBLIC_APP_URL") || supabaseUrl;
     
     console.log("Environment check:", {
       hasSupabaseUrl: !!supabaseUrl,
