@@ -405,10 +405,13 @@ export type Database = {
           handle: string | null
           id: string
           last_seen: string | null
+          max_guest_hours: number
           name: string
           phone: string | null
           preferred_language: string
           profile_image: string | null
+          qr_rotated_at: string | null
+          qr_slug: string
           show_online_status: boolean | null
           show_read_receipts: boolean | null
           status: string | null
@@ -419,10 +422,13 @@ export type Database = {
           handle?: string | null
           id: string
           last_seen?: string | null
+          max_guest_hours?: number
           name: string
           phone?: string | null
           preferred_language?: string
           profile_image?: string | null
+          qr_rotated_at?: string | null
+          qr_slug?: string
           show_online_status?: boolean | null
           show_read_receipts?: boolean | null
           status?: string | null
@@ -433,10 +439,13 @@ export type Database = {
           handle?: string | null
           id?: string
           last_seen?: string | null
+          max_guest_hours?: number
           name?: string
           phone?: string | null
           preferred_language?: string
           profile_image?: string | null
+          qr_rotated_at?: string | null
+          qr_slug?: string
           show_online_status?: boolean | null
           show_read_receipts?: boolean | null
           status?: string | null
@@ -506,6 +515,8 @@ export type Database = {
         Args: { participant_ids: string[] }
         Returns: string
       }
+      generate_qr_slug: { Args: never; Returns: string }
+      get_profile_by_qr_slug: { Args: { slug: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
