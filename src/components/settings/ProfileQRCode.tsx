@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import QRCode from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 
-const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const BASE = `${SUPABASE_URL}/functions/v1`;
 const ORIGIN = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
 
 export default function ProfileQRCode() {

@@ -7,7 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-const BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const BASE = `${SUPABASE_URL}/functions/v1`;
 const ORIGIN = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
 
 interface Message {
