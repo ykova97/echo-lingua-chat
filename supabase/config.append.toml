@@ -1,0 +1,5 @@
+[functions.cleanup-ephemeral-chats]
+verify_jwt = false
+
+[functions.cleanup-ephemeral-chats.schedule]
+cron = "*/15 * * * *"

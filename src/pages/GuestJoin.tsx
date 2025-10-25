@@ -3,13 +3,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 const LANGS = [
   { code: "en", label: "English" },
@@ -19,23 +14,19 @@ const LANGS = [
   { code: "de", label: "German" },
   { code: "pt", label: "Portuguese" },
   { code: "ru", label: "Russian" },
-  { code: "ar", label: "Arabic" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
 ];
 
 export default function GuestJoin() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [lang, setLang] = useState("en");
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleStart = async () => {
-    setErrorMsg("");
+  const start = async () => {
     if (!name.trim()) {
-      setErrorMsg("Please enter your name.");
+      toast({ title: "Name required", description: "Please enter your name.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -44,17 +35,16 @@ export default function GuestJoin() {
     });
     setLoading(false);
 
-    if (error) {
-      setErrorMsg(error.message || "Could not start a guest chat.");
+    if (error || !data?.guestJwt || !data?.chatId) {
+      toast({ title: "Couldn’t start guest chat", description: error?.message || "Please try again.", variant: "destructive" });
       return;
     }
 
-    const guestJwt = data.guestJwt as string;
-    const chatId = data.chatId as string;
-    sessionStorage.setItem("guestJwt", guestJwt);
-    sessionStorage.setItem("guestChatId", chatId);
+    sessionStorage.setItem("guestJwt", data.guestJwt);
+    sessionStorage.setItem("guestChatId", data.chatId);
+    sessionStorage.setItem("guestName", name.trim());
 
-    navigate(`/guest-chat/${chatId}`);
+    navigate(`/guest-chat/${data.chatId}`);
   };
 
   return (
@@ -68,45 +58,29 @@ export default function GuestJoin() {
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm space-y-4">
           <div className="text-sm text-muted-foreground">
-            No app required. Tell us your name and preferred language.
-            This temporary chat will be auto-deleted after you're done.
+            No app required. Tell us your name and preferred language. This chat auto-deletes later.
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Your name</label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Alex"
-              autoComplete="name"
-              inputMode="text"
-            />
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Alex" />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Preferred language</label>
             <Select value={lang} onValueChange={setLang}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a language" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select a language" /></SelectTrigger>
               <SelectContent>
-                {LANGS.map((l) => (
-                  <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>
-                ))}
+                {LANGS.map((l) => <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          {errorMsg && (
-            <div className="text-sm text-destructive">{errorMsg}</div>
-          )}
-
-          <Button className="w-full" disabled={loading || !name.trim()} onClick={handleStart}>
+          <Button className="w-full" disabled={loading || !name.trim()} onClick={start}>
             {loading ? "Starting…" : "Start chat"}
           </Button>
-
           <p className="text-[12px] text-muted-foreground text-center">
-            We'll match your language automatically in the conversation.
+            Your chat will be temporary and may be deleted automatically.
           </p>
         </div>
       </main>
