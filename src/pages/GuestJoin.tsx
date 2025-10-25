@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
@@ -16,8 +15,12 @@ const LANGS = [
   { code: "ru", label: "Russian" },
 ];
 
+// If your Lovable project uses a different base path for functions, set VITE_FUNCTION_BASE in env.
+// Defaults to Lovable's standard: /functions/v1
+const FUNCTION_BASE = (import.meta as any)?.env?.VITE_FUNCTION_BASE || "/functions/v1";
+
 export default function GuestJoin() {
-  const { token, slug } = useParams();
+  const { token } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -29,32 +32,48 @@ export default function GuestJoin() {
       toast({ title: "Name required", description: "Please enter your name.", variant: "destructive" });
       return;
     }
-    setLoading(true);
-
-    // Determine which flow to use based on route params
-    const isSlugFlow = !!slug;
-    const functionName = isSlugFlow ? "start-guest-chat" : "accept-qr-invite";
-    const body = isSlugFlow
-      ? { slug, name: name.trim(), preferredLanguage: lang }
-      : { token, name: name.trim(), preferredLanguage: lang };
-
-    const { data, error } = await supabase.functions.invoke(functionName, { body });
-    setLoading(false);
-
-    if (error || !data?.guestJwt || !data?.chatId) {
-      toast({ 
-        title: "Couldn't start guest chat", 
-        description: error?.message || "Please try again.", 
-        variant: "destructive" 
-      });
+    if (!token) {
+      toast({ title: "Invalid invite", description: "Missing or invalid invite token.", variant: "destructive" });
       return;
     }
 
-    sessionStorage.setItem("guestJwt", data.guestJwt);
-    sessionStorage.setItem("guestChatId", data.chatId);
-    sessionStorage.setItem("guestName", name.trim());
+    setLoading(true);
+    try {
+      const res = await fetch(`${FUNCTION_BASE}/accept-qr-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          name: name.trim(),
+          preferredLanguage: lang,
+        }),
+      });
 
-    navigate(`/guest-chat/${data.chatId}`);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`accept-qr-invite failed (${res.status}): ${text}`);
+      }
+
+      const data = await res.json();
+      if (!data?.guestJwt || !data?.chatId) {
+        throw new Error("Missing guestJwt or chatId from server response.");
+      }
+
+      // Persist for the guest-only session
+      sessionStorage.setItem("guestJwt", data.guestJwt);
+      sessionStorage.setItem("guestChatId", data.chatId);
+      sessionStorage.setItem("guestName", name.trim());
+
+      navigate(`/guest-chat/${data.chatId}`);
+    } catch (err: any) {
+      toast({
+        title: "Couldn’t start guest chat",
+        description: err?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,15 +92,21 @@ export default function GuestJoin() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Your name</label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g., Alex" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Alex" />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Preferred language</label>
             <Select value={lang} onValueChange={setLang}>
-              <SelectTrigger><SelectValue placeholder="Select a language" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a language" />
+              </SelectTrigger>
               <SelectContent>
-                {LANGS.map((l) => <SelectItem key={l.code} value={l.code}>{l.label}</SelectItem>)}
+                {LANGS.map((l) => (
+                  <SelectItem key={l.code} value={l.code}>
+                    {l.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
