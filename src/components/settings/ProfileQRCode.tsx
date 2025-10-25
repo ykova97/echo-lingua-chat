@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import QRCode from "qrcode.react";
+import QRCode from "react-qr-code";
 
 export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
