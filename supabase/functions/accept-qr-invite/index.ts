@@ -139,8 +139,9 @@ serve(async (req) => {
         role: "guest",
       })
         .setProtectedHeader({ alg: "HS256" })
+        .setSubject(guest.id)
         .setIssuedAt()
-        .setExpirationTime("4h")
+        .setExpirationTime(Math.floor(Date.now() / 1000) + (4 * 60 * 60))
         .sign(jwtSecret);
       
       console.log("JWT created successfully");
