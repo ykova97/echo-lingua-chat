@@ -39,8 +39,6 @@ const App = () => (
             <Route path="/guest/:token" element={<GuestJoin />} />
             <Route path="/join/:slug" element={<GuestJoin />} />
             <Route path="/guest-chat/:chatId" element={<GuestChat />} />
-            <Route path="/guest/:token" element={<(await import("./pages/GuestJoin")).default />} />
-            <Route path="/guest-chat/:chatId" element={<(await import("./pages/GuestChat")).default />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
