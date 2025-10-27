@@ -124,39 +124,36 @@ export default function ChatScopeChat({
               ))}
             </MessageList>
 
-            {/* Composer with paperclip + iOS kb-safe */}
-            <div className="kb-safe border-t bg-background">
-              <div className="flex items-center gap-1 px-2 pt-1">
-                <Button variant="ghost" size="icon" onClick={triggerFilePicker} aria-label="Attach">
-                  <Paperclip className="h-5 w-5" />
-                </Button>
-
-                <div className="flex-1">
-                  <MessageInput
-                    attachButton={false}
-                    placeholder="Type a message…"
-                    onSend={async (text) => {
-                      if (!text.trim()) return;
-                      setSending(true);
-                      try { await onSend(text.trim()); }
-                      finally { setSending(false); }
-                    }}
-                    disabled={sending}
-                  />
-                </div>
-              </div>
-
-              {/* Hidden file input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-            </div>
+            {/* MessageInput must be direct child of ChatContainer */}
+            <MessageInput
+              attachButton={false}
+              placeholder="Type a message…"
+              onSend={async (text) => {
+                if (!text.trim()) return;
+                setSending(true);
+                try { await onSend(text.trim()); }
+                finally { setSending(false); }
+              }}
+              disabled={sending}
+            />
           </ChatContainer>
         </MainContainer>
+      </div>
+
+      {/* Attach button and file input outside of ChatContainer */}
+      <div className="absolute bottom-0 left-0 right-0 kb-safe pointer-events-none">
+        <div className="flex items-center justify-start p-2 pointer-events-auto">
+          <Button variant="ghost" size="icon" onClick={triggerFilePicker} aria-label="Attach">
+            <Paperclip className="h-5 w-5" />
+          </Button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
     </div>
   );
