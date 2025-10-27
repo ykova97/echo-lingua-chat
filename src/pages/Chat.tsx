@@ -386,9 +386,9 @@ const Chat = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="chat-shell">
       {/* Sticky header at top */}
-      <div className="sticky top-0 z-20 border-b border-border bg-card">
+      <div className="sticky-header border-b border-border bg-card">
         <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
@@ -408,8 +408,7 @@ const Chat = () => {
       {/* Scrollable messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
-        style={{ overscrollBehavior: 'contain', scrollBehavior: 'auto' }}
+        className="chat-scroll px-4 py-6 space-y-4"
       >
         {messages.map((message) => (
           <MessageBubble
@@ -424,7 +423,7 @@ const Chat = () => {
       </div>
 
       {/* Sticky input bar at bottom */}
-      <div className="sticky bottom-0 z-20 border-t border-border bg-card">
+      <div className="sticky-footer kb-safe border-t border-border bg-card">
         <div className="px-5 pt-4 pb-6">
           <div className="flex gap-3">
             <Input

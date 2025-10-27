@@ -143,4 +143,54 @@
   .overscroll-contain {
     overscroll-behavior-y: contain;
   }
+
+  /* Mobile viewport and keyboard handling */
+  html, body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    overflow: hidden;
+  }
+
+  /* Chat shell uses dynamic viewport height and safe areas */
+  .chat-shell {
+    height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    display: flex;
+    flex-direction: column;
+    background: var(--background, transparent);
+  }
+
+  /* Sticky header/footer inside the shell */
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: saturate(180%) blur(8px);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
+  }
+  .sticky-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 40;
+  }
+
+  /* Scrollable middle pane */
+  .chat-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* iOS keyboard compensation */
+  :root {
+    --kb-offset: 0px;
+  }
+  .kb-safe {
+    transform: translateY(calc(-1 * var(--kb-offset)));
+    will-change: transform;
+  }
 }
