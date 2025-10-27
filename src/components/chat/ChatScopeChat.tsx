@@ -42,7 +42,6 @@ export default function ChatScopeChat({
   onSend
 }: Props) {
   useKeyboardInset();
-  const listRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => {
     return messages.map(m => ({
@@ -53,12 +52,6 @@ export default function ChatScopeChat({
       createdAt: m.created_at
     }));
   }, [messages, currentUserId]);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    const root = listRef.current?.querySelector(".cs-message-list__scroll-wrapper") as HTMLElement | null;
-    root?.scrollTo({ top: root.scrollHeight, behavior: "smooth" });
-  }, [items.length]);
 
   return (
     <div className="chat-shell">
@@ -74,7 +67,7 @@ export default function ChatScopeChat({
       <div style={{ flex: 1, minHeight: 0 }}>
         <MainContainer style={{ height: "100%", minHeight: 0 }}>
           <ChatContainer>
-            <MessageList ref={listRef as any} typingIndicator={typing ? <TypingIndicator content="Typing…" /> : undefined}>
+            <MessageList typingIndicator={typing ? <TypingIndicator content="Typing…" /> : undefined}>
               {items.map(m => (
                 <Message
                   key={m.key}
