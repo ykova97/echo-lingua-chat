@@ -351,13 +351,13 @@ const Chat = () => {
 
       {/* Fixed input bar */}
       <div className="sticky bottom-0 z-10 border-t border-border bg-card">
-        <div className="p-4 pb-6">
+        <div className="px-5 pt-4 pb-6">
           <div className="flex gap-3">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message…"
-              className="h-11 rounded-full"
+              className="h-12 rounded-full px-5"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -365,7 +365,7 @@ const Chat = () => {
                 }
               }}
             />
-            <Button onClick={handleSendMessage} size="icon" className="h-11 w-11 rounded-full" aria-label="Send">
+            <Button onClick={handleSendMessage} size="icon" className="h-12 w-12 rounded-full shrink-0" aria-label="Send">
               <Send className="h-5 w-5" />
             </Button>
           </div>
