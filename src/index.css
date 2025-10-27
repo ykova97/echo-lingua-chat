@@ -168,15 +168,13 @@
     position: sticky;
     top: 0;
     z-index: 40;
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(8px);
+    -webkit-backdrop-filter: saturate(180%) blur(8px);
   }
   .sticky-footer {
     position: sticky;
     bottom: 0;
     z-index: 40;
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
 
   /* Scrollable middle pane */
@@ -194,5 +192,10 @@
   .kb-safe {
     transform: translateY(calc(-1 * var(--kb-offset)));
     will-change: transform;
+  }
+
+  /* Prevent zoom on focus in iOS */
+  input, select, textarea {
+    font-size: 16px;
   }
 }
