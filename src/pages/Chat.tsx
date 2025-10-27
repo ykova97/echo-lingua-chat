@@ -323,19 +323,19 @@ const Chat = () => {
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
       {/* Fixed header */}
-      <header className="flex-none border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="p-4 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/chats")}>
+      <header className="flex-none border-b border-border bg-card">
+        <div className="px-4 py-3 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Chat</h1>
+          <h1 className="text-lg font-semibold">Chat</h1>
         </div>
       </header>
 
       {/* Scrollable messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-4 space-y-4"
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-6 space-y-4"
       >
         {messages.map((message) => (
           <MessageBubble
@@ -350,13 +350,14 @@ const Chat = () => {
       </div>
 
       {/* Fixed input bar */}
-      <div className="flex-none border-t bg-background">
+      <div className="flex-none border-t border-border bg-card">
         <div className="p-4">
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message…"
+              className="h-11 rounded-full"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -364,7 +365,7 @@ const Chat = () => {
                 }
               }}
             />
-            <Button onClick={handleSendMessage} size="icon" aria-label="Send">
+            <Button onClick={handleSendMessage} size="icon" className="h-11 w-11 rounded-full" aria-label="Send">
               <Send className="h-5 w-5" />
             </Button>
           </div>

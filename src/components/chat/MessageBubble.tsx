@@ -58,11 +58,11 @@ const MessageBubble = ({
   const isImage = message.attachment_type?.startsWith('image/');
 
   return (
-    <div className={`flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"} group`}>
+    <div className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"} group`}>
       {!isOwn && (
-        <Avatar className="w-8 h-8">
+        <Avatar className="w-9 h-9 ring-2 ring-background">
           <AvatarImage src={message.sender_image} />
-          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+          <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
             {message.sender_name?.[0] || "U"}
           </AvatarFallback>
         </Avatar>
@@ -70,15 +70,15 @@ const MessageBubble = ({
       
       <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"} max-w-[70%]`}>
         {!isOwn && (
-          <span className="text-xs text-muted-foreground mb-1 px-2">
+          <span className="text-xs text-muted-foreground mb-1.5 px-3 font-medium">
             {message.sender_name}
           </span>
         )}
         
         <div className="relative">
           <div
-            className={`rounded-2xl ${
-              isImage && !message.original_text ? 'p-0 overflow-hidden' : 'px-4 py-2.5'
+            className={`rounded-2xl shadow-sm ${
+              isImage && !message.original_text ? 'p-0 overflow-hidden' : 'px-4 py-3'
             } ${
               isOwn
                 ? "bg-[hsl(var(--message-sent))] text-[hsl(var(--message-sent-foreground))]"

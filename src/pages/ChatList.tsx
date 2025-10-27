@@ -470,24 +470,24 @@ const ChatList = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-primary-foreground" />
+            <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+              <MessageCircle className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-xl font-bold">Link</h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground font-medium">
                 {currentUser?.name || "User"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")}>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} className="rounded-full">
               <Settings className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleSignOut}>
+            <Button variant="ghost" size="icon" onClick={handleSignOut} className="rounded-full">
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
@@ -495,23 +495,23 @@ const ChatList = () => {
       </header>
 
       {/* Search Bar */}
-      <div className="max-w-4xl mx-auto px-4 py-3 bg-background">
-        <div className="flex items-center gap-2">
+      <div className="max-w-4xl mx-auto px-4 py-4 bg-background">
+        <div className="flex items-center gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search"
+              placeholder="Search chats"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-secondary/50 border-0 rounded-xl"
+              className="pl-11 h-11 bg-secondary/50 border-border rounded-full"
             />
           </div>
           <div className="flex gap-2">
-            <Button size="icon" onClick={() => setQrDialogOpen(true)} className="rounded-full" variant="outline">
+            <Button size="icon" onClick={() => setQrDialogOpen(true)} className="h-11 w-11 rounded-full" variant="outline">
               <QrCode className="w-5 h-5" />
             </Button>
-            <Button size="icon" onClick={() => navigate("/compose")} className="rounded-full">
+            <Button size="icon" onClick={() => navigate("/compose")} className="h-11 w-11 rounded-full">
               <Plus className="w-5 h-5" />
             </Button>
           </div>
@@ -519,16 +519,19 @@ const ChatList = () => {
       </div>
 
       {/* Chat List */}
-      <main className="max-w-4xl mx-auto px-4 pb-4">
+      <main className="max-w-4xl mx-auto px-4 pb-6">
         {chats.length === 0 ? (
-          <div className="text-center py-16 space-y-4">
-            <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto">
-              <MessageCircle className="w-8 h-8 text-muted-foreground" />
+          <div className="text-center py-20 space-y-4">
+            <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto">
+              <MessageCircle className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-semibold">No conversations yet</h2>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold">No conversations yet</h2>
+              <p className="text-muted-foreground">Start a new chat to begin messaging</p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {chats
               .filter((chat) => {
                 const chatName = getChatName(chat).toLowerCase();

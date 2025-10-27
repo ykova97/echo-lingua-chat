@@ -220,20 +220,20 @@ const ComposeNewMessage = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between h-[44px] px-4 border-b border-border/40 safe-area-inset-top">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card safe-area-inset-top">
         <Button
           variant="ghost"
           onClick={handleCancel}
-          className="text-primary hover:bg-transparent p-0 h-auto font-normal"
+          className="text-primary hover:bg-transparent p-0 h-auto font-medium"
         >
           Cancel
         </Button>
-        <h1 className="text-[17px] font-medium">New Message</h1>
+        <h1 className="text-lg font-semibold">New Message</h1>
         <div className="w-[60px]" />
       </div>
 
       {/* Recipient input */}
-      <div className="border-b border-border/40">
+      <div className="border-b border-border bg-card">
         <RecipientInput
           recipients={recipients}
           toFieldText={toFieldText}
