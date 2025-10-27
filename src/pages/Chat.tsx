@@ -431,14 +431,17 @@ const Chat = () => {
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message…"
-            className="h-12 rounded-full px-5"
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 handleSendMessage();
               }
             }}
+            placeholder="Type a message…"
+            className="h-12 rounded-full px-5"
+            autoComplete="off"
+            autoCorrect="on"
+            inputMode="text"
           />
           <Button onClick={handleSendMessage} size="icon" className="h-12 w-12 rounded-full shrink-0" aria-label="Send">
             <Send className="h-5 w-5" />
