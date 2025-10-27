@@ -351,7 +351,7 @@ const Chat = () => {
 
       {/* Fixed input bar */}
       <div className="sticky bottom-0 z-10 border-t border-border bg-card">
-        <div className="p-4">
+        <div className="p-4 pb-6">
           <div className="flex gap-3">
             <Input
               value={newMessage}
