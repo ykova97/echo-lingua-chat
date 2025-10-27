@@ -93,7 +93,8 @@ export default function Chat() {
         sender_image: profileMap.get(m.sender_id)?.profile_image,
         original_text: m.original_text,
         translated_text: transMap.get(m.id),
-        created_at: m.created_at
+        created_at: m.created_at,
+        media_url: m.attachment_url
       }))
       .reverse();
 
@@ -133,6 +134,40 @@ export default function Chat() {
     }
   };
 
+  const handleAttach = async (file: File) => {
+    if (!currentUser?.id || !chatId) return;
+    
+    try {
+      // Upload to Supabase storage
+      const fileName = `${chatId}/${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("chat-attachments")
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("chat-attachments")
+        .getPublicUrl(fileName);
+
+      // Insert message with attachment URL
+      const { error } = await supabase.from("messages").insert({
+        chat_id: chatId,
+        sender_id: currentUser.id,
+        original_text: publicUrl,
+        source_language: "en",
+        attachment_url: publicUrl,
+        attachment_type: file.type.startsWith("image/") ? "image" : "file"
+      });
+
+      if (error) throw error;
+      await loadMessages();
+    } catch {
+      toast({ title: "Upload failed", description: "Could not upload attachment.", variant: "destructive" });
+    }
+  };
+
   if (loading) {
     return (
       <div className="chat-shell">
@@ -152,6 +187,7 @@ export default function Chat() {
       currentUserId={currentUser?.id || ""}
       messages={messages}
       onSend={handleSend}
+      onAttach={handleAttach}
     />
   );
 }
