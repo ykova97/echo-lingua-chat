@@ -388,8 +388,8 @@ const Chat = () => {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Sticky header at top */}
-      <div className="border-b border-border bg-card">
-        <div className="sticky top-0 px-4 py-3 flex items-center gap-3 bg-card z-20">
+      <div className="sticky top-0 z-20 border-b border-border bg-card">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
