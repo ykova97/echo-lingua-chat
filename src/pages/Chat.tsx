@@ -386,9 +386,9 @@ const Chat = () => {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background">
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
       {/* Fixed header */}
-      <header className="sticky top-0 z-10 border-b border-border bg-card">
+      <header className="fixed top-0 left-0 right-0 z-10 border-b border-border bg-card">
         <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
@@ -405,11 +405,15 @@ const Chat = () => {
         </div>
       </header>
 
-      {/* Scrollable messages */}
+      {/* Scrollable messages with padding for fixed header and input */}
       <div 
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
-        style={{ overscrollBehavior: 'contain' }}
+        style={{ 
+          paddingTop: '4.5rem',
+          paddingBottom: '6rem',
+          overscrollBehavior: 'contain' 
+        }}
       >
         {messages.map((message) => (
           <MessageBubble
@@ -424,7 +428,7 @@ const Chat = () => {
       </div>
 
       {/* Fixed input bar */}
-      <div className="sticky bottom-0 z-10 border-t border-border bg-card">
+      <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-border bg-card">
         <div className="px-5 pt-4 pb-6">
           <div className="flex gap-3">
             <Input
