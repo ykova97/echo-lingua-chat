@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BASE = `${SUPABASE_URL}/functions/v1`;
@@ -67,6 +68,8 @@ const Chat = () => {
   const [showOriginalMap, setShowOriginalMap] = useState<Record<string, boolean>>({});
   const [otherUser, setOtherUser] = useState<{ name: string; language: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  useKeyboardInset();
 
   useEffect(() => {
     const fetchUser = async () => {
