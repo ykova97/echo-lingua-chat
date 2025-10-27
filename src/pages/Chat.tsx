@@ -390,61 +390,59 @@ const Chat = () => {
 
   return (
     <div className="chat-shell">
-      {/* Sticky header at top */}
-      <div className="sticky-header border-b border-border bg-card">
+      {/* Sticky Header */}
+      <header className="sticky-header border-b bg-background/80 supports-[backdrop-filter]:bg-background/60">
         <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex flex-col">
-            <h1 className="text-lg font-semibold">Chat</h1>
+          <div className="flex flex-col flex-1 min-w-0">
+            <h1 className="text-lg font-semibold truncate">
+              {otherUser?.name || "Chat"}
+            </h1>
             {otherUser && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>{otherUser.name}</span>
                 <span className="text-lg">{getLanguageFlag(otherUser.language)}</span>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Scrollable messages */}
-      <div 
-        ref={scrollRef}
-        className="chat-scroll px-4 py-6 space-y-4"
-      >
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isOwn={message.sender_id === currentUser?.id}
-            showOriginal={showOriginalMap[message.id] || false}
-            currentUserId={currentUser?.id || ""}
-            onToggleOriginal={() => toggleOriginal(message.id)}
-          />
-        ))}
-      </div>
-
-      {/* Sticky input bar at bottom */}
-      <div className="sticky-footer kb-safe border-t border-border bg-card">
-        <div className="px-5 pt-4 pb-6">
-          <div className="flex gap-3">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message…"
-              className="h-12 rounded-full px-5"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
+      {/* Scrollable content */}
+      <div ref={scrollRef} className="chat-scroll px-4 py-3">
+        <div className="space-y-4 pb-24">
+          {messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isOwn={message.sender_id === currentUser?.id}
+              showOriginal={showOriginalMap[message.id] || false}
+              currentUserId={currentUser?.id || ""}
+              onToggleOriginal={() => toggleOriginal(message.id)}
             />
-            <Button onClick={handleSendMessage} size="icon" className="h-12 w-12 rounded-full shrink-0" aria-label="Send">
-              <Send className="h-5 w-5" />
-            </Button>
-          </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sticky Footer (input bar) — kb-safe lifts it above the keyboard */}
+      <div className="sticky-footer kb-safe border-t bg-background">
+        <div className="p-3 flex gap-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message…"
+            className="h-12 rounded-full px-5"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          <Button onClick={handleSendMessage} size="icon" className="h-12 w-12 rounded-full shrink-0" aria-label="Send">
+            <Send className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </div>
