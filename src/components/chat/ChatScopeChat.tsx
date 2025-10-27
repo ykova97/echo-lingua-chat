@@ -10,6 +10,7 @@ import {
   TypingIndicator
 } from "@chatscope/chat-ui-kit-react";
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
+import "@/styles/chat-scope-overrides.css";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 export interface ChatScopeMessage {

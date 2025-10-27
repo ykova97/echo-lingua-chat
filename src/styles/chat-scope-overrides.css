@@ -1,0 +1,58 @@
+/* Root background stays white like your old design */
+.cs-main-container,
+.cs-chat-container,
+.cs-message-list,
+.cs-message-list__scroll-wrapper {
+  background: #ffffff !important;
+}
+
+/* Tighter vertical rhythm */
+.cs-message-list__scroll-wrapper {
+  padding: 12px 12px 24px 12px !important;
+}
+
+/* Bubble max width similar to iMessage */
+.cs-message {
+  max-width: 78% !important;
+}
+
+/* Outgoing (you) — iOS blue, white text, rounded corners */
+.cs-message--outgoing .cs-message__content {
+  background: #3b82f6 !important;      /* Tailwind blue-500 */
+  color: #ffffff !important;
+  border-radius: 18px 18px 4px 18px !important;
+  box-shadow: none !important;
+}
+
+/* Incoming — light grey-blue, dark text, rounded corners */
+.cs-message--incoming .cs-message__content {
+  background: #e6f0fb !important;      /* soft blue like your screenshot */
+  color: #111827 !important;           /* gray-900 */
+  border-radius: 18px 18px 18px 4px !important;
+  box-shadow: none !important;
+}
+
+/* Remove Chatscope inner header (we use our own) */
+.cs-conversation-header {
+  display: none !important;
+}
+
+/* Input bar: keep flat, like your old message composer */
+.cs-message-input {
+  border-top: 1px solid rgba(0,0,0,0.08) !important;
+  background: #ffffff !important;
+}
+.cs-message-input__content-editor {
+  min-height: 40px !important;
+  border-radius: 12px !important;
+}
+
+/* Hide send 'attach' button, keep send on the right (we disable attach anyway) */
+.cs-button--attachment {
+  display: none !important;
+}
+
+/* iPhone bottom home indicator spacing awareness (works with our kb-safe) */
+.cs-chat-container {
+  padding-bottom: env(safe-area-inset-bottom) !important;
+}
