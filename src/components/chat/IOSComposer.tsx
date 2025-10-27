@@ -45,7 +45,7 @@ export default function IOSComposer({
       className={[
         // sticky bottom bar + safe-area padding
         "sticky bottom-0 z-40 border-t bg-[#f2f2f7]",
-        "px-2 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2",
+        "px-2 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-1",
         "kb-safe", // your keyboard hook lifts this
         "ios-composer-shadow",
         className,
