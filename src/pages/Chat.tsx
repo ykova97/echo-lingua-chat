@@ -391,8 +391,8 @@ const Chat = () => {
 
   return (
     <div className="chat-shell">
-      {/* Sticky Header */}
-      <header className="sticky-header border-b bg-background/80 supports-[backdrop-filter]:bg-background/60">
+      {/* Fixed Header */}
+      <header className="sticky-header border-b bg-background/95 supports-[backdrop-filter]:bg-background/80">
         <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
