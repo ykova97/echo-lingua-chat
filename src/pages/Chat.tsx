@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import ChatScopeChat, { ChatScopeMessage } from "@/components/chat/ChatScopeChat";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { v4 as uuidv4 } from "uuid";
 
 const PAGE_SIZE = 30;
 
@@ -135,36 +136,41 @@ export default function Chat() {
   };
 
   const handleAttach = async (file: File) => {
-    if (!currentUser?.id || !chatId) return;
-    
     try {
-      // Upload to Supabase storage
-      const fileName = `${chatId}/${Date.now()}_${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("chat-attachments")
-        .upload(fileName, file);
+      if (!currentUser?.id || !chatId) return;
 
-      if (uploadError) throw uploadError;
+      // 1) Upload to Supabase Storage
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${chatId}/${currentUser.id}/${uuidv4()}.${ext}`;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("chat-attachments")
-        .getPublicUrl(fileName);
+      const { error: upErr } = await supabase.storage.from("chat-uploads").upload(path, file, {
+        upsert: false,
+        cacheControl: "3600",
+        contentType: file.type || "image/jpeg",
+      });
+      if (upErr) throw upErr;
 
-      // Insert message with attachment URL
-      const { error } = await supabase.from("messages").insert({
+      // 2) Get public URL
+      const { data: pub } = supabase.storage.from("chat-uploads").getPublicUrl(path);
+      const publicUrl = pub.publicUrl;
+
+      // 3) Create a message that carries the image URL in original_text (no schema change required)
+      const { error: msgErr } = await supabase.from("messages").insert({
         chat_id: chatId,
         sender_id: currentUser.id,
-        original_text: publicUrl,
-        source_language: "en",
-        attachment_url: publicUrl,
-        attachment_type: file.type.startsWith("image/") ? "image" : "file"
+        original_text: publicUrl,    // our wrapper will render this as an image bubble
+        source_language: "en"
       });
+      if (msgErr) throw msgErr;
 
-      if (error) throw error;
+      // 4) Optionally reload messages or optimistically append
       await loadMessages();
-    } catch {
-      toast({ title: "Upload failed", description: "Could not upload attachment.", variant: "destructive" });
+    } catch (e) {
+      toast({
+        title: "Attachment failed",
+        description: "Could not upload or send the picture.",
+        variant: "destructive",
+      });
     }
   };
 
