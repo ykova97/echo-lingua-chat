@@ -13,6 +13,37 @@ import MessageBubble from "@/components/chat/MessageBubble";
 
 const PAGE_SIZE = 30;
 
+const getLanguageFlag = (langCode: string): string => {
+  const flags: Record<string, string> = {
+    'en': '🇬🇧',
+    'es': '🇪🇸',
+    'fr': '🇫🇷',
+    'de': '🇩🇪',
+    'it': '🇮🇹',
+    'pt': '🇵🇹',
+    'ru': '🇷🇺',
+    'ja': '🇯🇵',
+    'ko': '🇰🇷',
+    'zh': '🇨🇳',
+    'ar': '🇸🇦',
+    'hi': '🇮🇳',
+    'tr': '🇹🇷',
+    'nl': '🇳🇱',
+    'pl': '🇵🇱',
+    'sv': '🇸🇪',
+    'no': '🇳🇴',
+    'da': '🇩🇰',
+    'fi': '🇫🇮',
+    'el': '🇬🇷',
+    'cs': '🇨🇿',
+    'he': '🇮🇱',
+    'th': '🇹🇭',
+    'vi': '🇻🇳',
+    'id': '🇮🇩',
+  };
+  return flags[langCode] || '🌐';
+};
+
 interface Message {
   id: string;
   sender_id: string;
@@ -34,6 +65,7 @@ const Chat = () => {
   const [newMessage, setNewMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [showOriginalMap, setShowOriginalMap] = useState<Record<string, boolean>>({});
+  const [otherUser, setOtherUser] = useState<{ name: string; language: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +77,40 @@ const Chat = () => {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.id || !chatId) return;
+
+    const fetchOtherUser = async () => {
+      // Get chat participants
+      const { data: participants } = await supabase
+        .from("chat_participants")
+        .select("user_id")
+        .eq("chat_id", chatId);
+
+      if (!participants) return;
+
+      // Find the other user (not current user)
+      const otherUserId = participants.find(p => p.user_id !== currentUser.id)?.user_id;
+      
+      if (otherUserId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name, preferred_language")
+          .eq("id", otherUserId)
+          .single();
+
+        if (profile) {
+          setOtherUser({
+            name: profile.name,
+            language: profile.preferred_language
+          });
+        }
+      }
+    };
+
+    fetchOtherUser();
+  }, [currentUser?.id, chatId]);
 
   async function loadMessagesPage(before?: string) {
     if (!chatId) return { messages: [], nextCursor: null };
@@ -327,7 +393,15 @@ const Chat = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/chats")} className="rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold">Chat</h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-semibold">Chat</h1>
+            {otherUser && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>{otherUser.name}</span>
+                <span className="text-lg">{getLanguageFlag(otherUser.language)}</span>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
