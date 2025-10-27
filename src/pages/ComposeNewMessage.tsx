@@ -167,9 +167,22 @@ const ComposeNewMessage = () => {
 
       // Send initial message via Edge Function
       if (message.trim()) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to send messages",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const res = await fetch(`${BASE}/translate-message`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             chatId,
             message,
