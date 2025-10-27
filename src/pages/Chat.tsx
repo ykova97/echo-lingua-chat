@@ -17,7 +17,6 @@ export default function Chat() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [chatTitle, setChatTitle] = useState("Chat");
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
@@ -146,7 +145,7 @@ export default function Chat() {
   return (
     <ChatScopeChat
       title={chatTitle}
-      avatarUrl={avatarUrl}
+      onBack={() => navigate("/chats")}
       currentUserId={currentUser?.id || ""}
       messages={messages}
       onSend={handleSend}

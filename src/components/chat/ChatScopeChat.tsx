@@ -5,12 +5,9 @@ import {
   MessageList,
   Message,
   MessageInput,
-  ConversationHeader,
-  Avatar,
-  TypingIndicator
 } from "@chatscope/chat-ui-kit-react";
-import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
-import "@/styles/chat-scope-overrides.css";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 export interface ChatScopeMessage {
@@ -25,7 +22,7 @@ export interface ChatScopeMessage {
 
 type Props = {
   title: string;                 // Header title (chat or user name)
-  avatarUrl?: string;            // Optional header avatar
+  onBack?: () => void;           // Back handler
   currentUserId: string;
   messages: ChatScopeMessage[];
   loading?: boolean;
@@ -35,40 +32,50 @@ type Props = {
 
 export default function ChatScopeChat({
   title,
-  avatarUrl,
+  onBack,
   currentUserId,
   messages,
-  loading,
   typing,
   onSend
 }: Props) {
   useKeyboardInset();
+  const listRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => {
     return messages.map(m => ({
       key: m.id,
       text: m.translated_text ?? m.original_text,
       sender: m.sender_name || "",
-      direction: m.sender_id === currentUserId ? "outgoing" as const : "incoming" as const,
+      direction: m.sender_id === currentUserId ? ("outgoing" as const) : ("incoming" as const),
       createdAt: m.created_at
     }));
   }, [messages, currentUserId]);
 
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const root = listRef.current?.querySelector(".cs-message-list__scroll-wrapper") as HTMLElement | null;
+    root?.scrollTo({ top: root.scrollHeight, behavior: "smooth" });
+  }, [items.length]);
+
   return (
     <div className="chat-shell">
-      {/* Sticky header (Chatscope ConversationHeader) */}
-      <div className="sticky-header kb-safe border-b bg-background">
-        <ConversationHeader>
-          {avatarUrl ? <Avatar name={title} src={avatarUrl} /> : <Avatar name={title} />}
-          <ConversationHeader.Content userName={title} info="" />
-        </ConversationHeader>
-      </div>
+      {/* Our own sticky header to match previous design */}
+      <header className="sticky-header border-b bg-background/80 supports-[backdrop-filter]:bg-background/60">
+        <div className="px-4 py-3 flex items-center gap-3">
+          {onBack ? (
+            <Button variant="ghost" size="icon" onClick={onBack}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          ) : null}
+          <h1 className="text-lg font-semibold truncate">{title}</h1>
+        </div>
+      </header>
 
-      {/* Chatscope container takes the rest of the height */}
+      {/* Chatscope fills remaining height */}
       <div style={{ flex: 1, minHeight: 0 }}>
         <MainContainer style={{ height: "100%", minHeight: 0 }}>
           <ChatContainer>
-            <MessageList typingIndicator={typing ? <TypingIndicator content="Typing…" /> : undefined}>
+            <MessageList ref={listRef as any}>
               {items.map(m => (
                 <Message
                   key={m.key}
@@ -82,7 +89,8 @@ export default function ChatScopeChat({
                 />
               ))}
             </MessageList>
-            {/* Sticky input at bottom; kb-safe lifts on iOS */}
+
+            {/* Input at bottom; kb-safe lifts it when iOS keyboard shows */}
             <div className="kb-safe">
               <MessageInput
                 attachButton={false}
