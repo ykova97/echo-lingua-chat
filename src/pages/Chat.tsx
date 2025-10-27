@@ -6,7 +6,7 @@ import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BASE = `${SUPABASE_URL}/functions/v1`;
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -325,7 +325,8 @@ const Chat = () => {
   }, [currentUser?.id, chatId]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUser?.id || !chatId) return;
+    const trimmed = newMessage.trim();
+    if (!trimmed || !currentUser?.id || !chatId) return;
 
     const messageText = newMessage;
     setNewMessage("");
@@ -411,7 +412,7 @@ const Chat = () => {
 
       {/* Scrollable content */}
       <div ref={scrollRef} className="chat-scroll px-4 py-3">
-        <div className="space-y-4 pb-24">
+        <div className="space-y-4 pb-3">
           {messages.map((message) => (
             <MessageBubble
               key={message.id}
@@ -426,24 +427,33 @@ const Chat = () => {
       </div>
 
       {/* Sticky Footer (input bar) — kb-safe lifts it above the keyboard */}
-      <div className="sticky-footer kb-safe border-t bg-background">
-        <div className="p-3 flex gap-2">
-          <Input
+      <div className="sticky-footer kb-safe border-t bg-background/80 supports-[backdrop-filter]:bg-background/60">
+        <div className="px-3 py-2 flex items-end gap-2">
+          <Textarea
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSendMessage();
               }
             }}
             placeholder="Type a message…"
-            className="h-12 rounded-full px-5"
+            className="min-h-[44px] max-h-[120px] resize-none rounded-[20px] px-4 py-3"
+            rows={1}
             autoComplete="off"
             autoCorrect="on"
-            inputMode="text"
+            style={{
+              fieldSizing: "content"
+            } as React.CSSProperties}
           />
-          <Button onClick={handleSendMessage} size="icon" className="h-12 w-12 rounded-full shrink-0" aria-label="Send">
+          <Button 
+            onClick={handleSendMessage} 
+            size="icon" 
+            className="h-11 w-11 rounded-full shrink-0" 
+            aria-label="Send"
+            disabled={!newMessage.trim()}
+          >
             <Send className="h-5 w-5" />
           </Button>
         </div>

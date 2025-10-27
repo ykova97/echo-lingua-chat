@@ -168,13 +168,15 @@
     position: sticky;
     top: 0;
     z-index: 40;
-    backdrop-filter: saturate(180%) blur(8px);
-    -webkit-backdrop-filter: saturate(180%) blur(8px);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
   .sticky-footer {
     position: sticky;
     bottom: 0;
     z-index: 40;
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
 
   /* Scrollable middle pane */
