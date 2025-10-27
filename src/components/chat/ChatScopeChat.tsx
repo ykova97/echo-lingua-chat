@@ -141,10 +141,16 @@ export default function ChatScopeChat({
       </div>
 
       {/* Attach button and file input outside of ChatContainer */}
-      <div className="absolute bottom-0 left-0 right-0 kb-safe pointer-events-none">
-        <div className="flex items-center justify-start p-2 pointer-events-auto">
-          <Button variant="ghost" size="icon" onClick={triggerFilePicker} aria-label="Attach">
-            <Paperclip className="h-5 w-5" />
+      <div className="absolute bottom-16 left-2 kb-safe pointer-events-none z-10">
+        <div className="pointer-events-auto">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={triggerFilePicker} 
+            aria-label="Attach"
+            className="h-10 w-10 rounded-full bg-white hover:bg-gray-100 shadow-sm border border-gray-200"
+          >
+            <Paperclip className="h-5 w-5 text-gray-600" />
           </Button>
         </div>
         <input
