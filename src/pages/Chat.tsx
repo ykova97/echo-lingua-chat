@@ -121,16 +121,32 @@ export default function Chat() {
   const handleSend = async (text: string) => {
     if (!text.trim() || !currentUser?.id || !chatId) return;
     try {
-      const { error } = await supabase.from("messages").insert({
-        chat_id: chatId,
-        sender_id: currentUser.id,
-        original_text: text.trim(),
-        source_language: "en"
+      // Call the translate-message edge function which handles both insertion and translation
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("No session");
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/translate-message`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId: chatId,
+          message: text.trim(),
+          sourceLanguage: "en"
+        })
       });
-      if (error) throw error;
-      // Reload (or append optimistically if you prefer)
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to send message");
+      }
+
+      // Reload messages to show the new one with translations
       await loadMessages();
-    } catch {
+    } catch (error) {
+      console.error("Send error:", error);
       toast({ title: "Send failed", description: "Could not send your message.", variant: "destructive" });
     }
   };
