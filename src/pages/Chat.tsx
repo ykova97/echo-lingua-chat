@@ -63,7 +63,10 @@ export default function Chat() {
 
     const { data: msgs, error } = await query;
     if (error) throw error;
-    if (!msgs?.length) return;
+    if (!msgs?.length) {
+      setMessages([]);
+      return;
+    }
 
     const senderIds = Array.from(new Set(msgs.map((m: any) => m.sender_id)));
     const { data: profs } = await supabase
