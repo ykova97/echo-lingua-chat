@@ -59,20 +59,26 @@
   display: none !important;
 }
 
-/* Input area - iOS iMessage style */
-.cs-message-input {
+/* Input area - iOS iMessage style with maximum specificity */
+.cs-chat-container .cs-message-input,
+div.cs-message-input {
   border: none !important;
   background: #f2f2f7 !important;
   padding: 8px 12px !important;
   box-shadow: none !important;
   border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  margin: 0 !important;
 }
 
-.cs-message-input__content-editor-wrapper {
+.cs-chat-container .cs-message-input__content-editor-wrapper,
+div.cs-message-input__content-editor-wrapper {
   flex: 1 !important;
+  margin: 0 !important;
 }
 
-.cs-message-input__content-editor {
+.cs-chat-container .cs-message-input__content-editor,
+div.cs-message-input__content-editor,
+[contenteditable="true"].cs-message-input__content-editor {
   min-height: 36px !important;
   max-height: 120px !important;
   border-radius: 24px !important;
@@ -81,15 +87,19 @@
   font-size: 16px !important;
   border: 1px solid #d1d1d6 !important;
   transition: all 0.2s ease !important;
+  margin: 0 !important;
 }
 
-.cs-message-input__content-editor:focus {
+.cs-chat-container .cs-message-input__content-editor:focus,
+div.cs-message-input__content-editor:focus {
   background: #ffffff !important;
   border-color: #c7c7cc !important;
   box-shadow: none !important;
+  outline: none !important;
 }
 
-.cs-message-input__content-editor[placeholder]:empty:before {
+.cs-message-input__content-editor[placeholder]:empty:before,
+[contenteditable="true"].cs-message-input__content-editor[placeholder]:empty:before {
   color: #a0a0a5 !important;
   font-weight: 400 !important;
   font-size: 16px !important;
