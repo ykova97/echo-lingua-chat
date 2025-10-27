@@ -4,11 +4,11 @@ import {
   ChatContainer,
   MessageList,
   Message,
-  MessageInput
 } from "@chatscope/chat-ui-kit-react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Paperclip } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
+import IOSComposer from "./IOSComposer";
 
 export interface ChatScopeMessage {
   id: string;
@@ -45,7 +45,6 @@ export default function ChatScopeChat({
   onAttach
 }: Props) {
   useKeyboardInset();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [sending, setSending] = useState(false);
 
   const items = useMemo(() => {
@@ -62,16 +61,6 @@ export default function ChatScopeChat({
       };
     });
   }, [messages, currentUserId]);
-
-  const triggerFilePicker = () => fileInputRef.current?.click();
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    onAttach(f);
-    // reset so selecting same file twice still triggers change
-    e.target.value = "";
-  };
 
   return (
     <div className="chat-shell">
@@ -123,44 +112,19 @@ export default function ChatScopeChat({
                 </Message>
               ))}
             </MessageList>
-
-            {/* MessageInput must be direct child of ChatContainer */}
-            <MessageInput
-              attachButton={false}
-              placeholder="Type a message…"
-              onSend={async (text) => {
-                if (!text.trim()) return;
-                setSending(true);
-                try { await onSend(text.trim()); }
-                finally { setSending(false); }
-              }}
-              disabled={sending}
-            />
           </ChatContainer>
         </MainContainer>
       </div>
 
-      {/* Attach button - iOS style positioned on left */}
-      <div className="absolute bottom-16 left-3 kb-safe pointer-events-none z-10">
-        <div className="pointer-events-auto">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={triggerFilePicker} 
-            aria-label="Attach"
-            className="h-9 w-9 rounded-full bg-white hover:bg-gray-50 shadow-none border border-gray-300"
-          >
-            <Paperclip className="h-4 w-4 text-gray-500" />
-          </Button>
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-        />
-      </div>
+      {/* iOS-style composer at bottom */}
+      <IOSComposer
+        onSend={async (text) => {
+          setSending(true);
+          try { await onSend(text); }
+          finally { setSending(false); }
+        }}
+        onAttach={onAttach}
+      />
     </div>
   );
 }
