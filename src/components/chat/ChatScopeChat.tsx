@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   MainContainer,
   ChatContainer,
@@ -45,7 +45,6 @@ export default function ChatScopeChat({
   onAttach
 }: Props) {
   useKeyboardInset();
-  const listRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [sending, setSending] = useState(false);
 
@@ -63,12 +62,6 @@ export default function ChatScopeChat({
       };
     });
   }, [messages, currentUserId]);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    const root = listRef.current?.querySelector(".cs-message-list__scroll-wrapper") as HTMLElement | null;
-    root?.scrollTo({ top: root.scrollHeight, behavior: "smooth" });
-  }, [items.length]);
 
   const triggerFilePicker = () => fileInputRef.current?.click();
 
@@ -98,7 +91,7 @@ export default function ChatScopeChat({
       <div style={{ flex: 1, minHeight: 0 }}>
         <MainContainer style={{ height: "100%", minHeight: 0 }}>
           <ChatContainer>
-            <MessageList ref={listRef as any}>
+            <MessageList>
               {items.map(m => (
                 <Message
                   key={m.key}
