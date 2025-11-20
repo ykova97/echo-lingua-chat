@@ -23,6 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ChatListSkeleton } from "@/components/chat/ChatListSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import ProfileQRCode from "@/components/settings/ProfileQRCode";
 
 interface Chat {
@@ -554,11 +556,38 @@ const ChatList = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <MessageCircle className="w-12 h-12 text-primary mx-auto animate-pulse" />
-          <p className="text-muted-foreground">Loading your chats...</p>
+      <div className="flex flex-col h-screen bg-background px-6 pt-6">
+        {/* Header Card Skeleton */}
+        <header className="card-float gradient-header p-4 mb-6">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <Skeleton className="w-12 h-12 rounded-full flex-shrink-0" />
+              <div className="flex flex-col gap-2 min-w-0 flex-1">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-6 flex-shrink-0">
+              <Skeleton className="h-6 w-12 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+          </div>
+        </header>
+
+        {/* Search Bar Skeleton */}
+        <div className="px-4 mb-6">
+          <div className="rounded-full bg-white shadow-inner-soft p-1 flex items-center gap-3" style={{ border: '1px solid transparent', backgroundImage: 'linear-gradient(white, white), var(--gradient-border)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
+            <div className="flex-1 pl-4">
+              <Skeleton className="h-10 w-full max-w-xs" />
+            </div>
+            <Skeleton className="rounded-full h-10 w-10" />
+          </div>
         </div>
+
+        {/* Chat List Skeleton */}
+        <main className="px-6 pb-32">
+          <ChatListSkeleton />
+        </main>
       </div>
     );
   }
