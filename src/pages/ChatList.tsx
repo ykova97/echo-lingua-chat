@@ -112,7 +112,43 @@ const ChatList = () => {
             
             if (!isParticipant) return;
             
-            // Update the chat list
+            // Try to get translation for user's preferred language
+            let messageText = newMsg.original_text;
+            if (currentUser?.preferred_language) {
+              // Wait a bit for translation to be created
+              setTimeout(async () => {
+                const { data: translation } = await supabase
+                  .from("message_translations")
+                  .select("translated_text")
+                  .eq("message_id", newMsg.id)
+                  .eq("user_id", currentUser.id)
+                  .eq("target_language", currentUser.preferred_language)
+                  .maybeSingle();
+                
+                if (translation) {
+                  // Update the chat with translated text
+                  setChats(prev => {
+                    const chatIndex = prev.findIndex(c => c.id === newMsg.chat_id);
+                    if (chatIndex === -1) return prev;
+                    
+                    const updatedChats = [...prev];
+                    const chat = updatedChats[chatIndex];
+                    
+                    updatedChats[chatIndex] = {
+                      ...chat,
+                      last_message: {
+                        text: translation.translated_text,
+                        created_at: newMsg.created_at,
+                      },
+                    };
+                    
+                    return updatedChats;
+                  });
+                }
+              }, 1000);
+            }
+            
+            // Update the chat list immediately with original text
             setChats(prev => {
               const chatIndex = prev.findIndex(c => c.id === newMsg.chat_id);
               
@@ -130,7 +166,7 @@ const ChatList = () => {
               updatedChats[chatIndex] = {
                 ...chat,
                 last_message: {
-                  text: newMsg.original_text,
+                  text: messageText,
                   created_at: newMsg.created_at,
                 },
                 // Increment unread count if message is from someone else
@@ -328,14 +364,30 @@ const ChatList = () => {
             })
           );
 
-          // Get last message
+          // Get last message with translation
           const { data: lastMessage } = await supabase
             .from("messages")
-            .select("original_text, created_at")
+            .select("id, original_text, created_at")
             .eq("chat_id", chat.id)
             .order("created_at", { ascending: false })
             .limit(1)
             .single();
+
+          // Get translation for user's preferred language if last message exists
+          let translatedText = lastMessage?.original_text;
+          if (lastMessage && currentUser?.preferred_language) {
+            const { data: translation } = await supabase
+              .from("message_translations")
+              .select("translated_text")
+              .eq("message_id", lastMessage.id)
+              .eq("user_id", user.id)
+              .eq("target_language", currentUser.preferred_language)
+              .maybeSingle();
+            
+            if (translation) {
+              translatedText = translation.translated_text;
+            }
+          }
 
           // Get unread count
           const { data: messages } = await supabase
@@ -364,7 +416,7 @@ const ChatList = () => {
             ...chat,
             participants: participants || [],
             last_message: lastMessage ? {
-              text: lastMessage.original_text,
+              text: translatedText,
               created_at: lastMessage.created_at,
             } : undefined,
             unread_count: unreadCount,
