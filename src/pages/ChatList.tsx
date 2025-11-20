@@ -598,7 +598,7 @@ const ChatList = () => {
           <div className="rounded-full bg-white shadow-inner-soft p-1 flex items-center gap-3" style={{ border: '1px solid transparent', backgroundImage: 'linear-gradient(white, white), var(--gradient-border)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
             <div className="flex-1 pl-4">
               <Input
-                placeholder="Ask Kinso"
+                placeholder="ask Link"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="border-0 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/60 h-10 px-0"
