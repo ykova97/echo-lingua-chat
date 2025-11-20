@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Plus, LogOut, Settings, Search, QrCode } from "lucide-react";
+import { MessageCircle, Plus, LogOut, Settings, Search, QrCode, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { SwipeableChatItem } from "@/components/chat/SwipeableChatItem";
@@ -167,6 +167,19 @@ const ChatList = () => {
             // New chat participant added for current user - reload chat list
             console.log('New chat participant detected, reloading chats');
             await loadChats();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${currentUser.id}`,
+          },
+          async () => {
+            // Profile updated - refresh user data
+            await checkAuth();
           }
         )
         .subscribe();
@@ -481,13 +494,19 @@ const ChatList = () => {
                 </AvatarFallback>
               </Avatar>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                Good morning, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {chats.filter(c => c.unread_count).length} new and {chats.length} active
-              </p>
+            <div className="flex items-center gap-2">
+              <div>
+                <h1 className="text-xl font-bold text-foreground">
+                  Good morning, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  {chats.filter(c => c.unread_count).length} new and {chats.length} active
+                </p>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/50 text-xs font-medium">
+                <Globe className="h-3 w-3" />
+                <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
+              </div>
             </div>
           </div>
           <Button
