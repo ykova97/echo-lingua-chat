@@ -100,6 +100,36 @@ export default function Chat() {
       .reverse();
 
     setMessages(assembled);
+    
+    // Mark messages from other users as read
+    if (currentUser?.id) {
+      const otherUsersMessages = msgs.filter((m: any) => m.sender_id !== currentUser.id);
+      if (otherUsersMessages.length > 0) {
+        // Get existing read receipts to avoid duplicates
+        const { data: existingReceipts } = await supabase
+          .from("message_read_receipts")
+          .select("message_id")
+          .eq("user_id", currentUser.id)
+          .in("message_id", otherUsersMessages.map((m: any) => m.id));
+        
+        const existingReceiptIds = new Set((existingReceipts || []).map((r: any) => r.message_id));
+        
+        // Create read receipts for messages without them
+        const receiptsToCreate = otherUsersMessages
+          .filter((m: any) => !existingReceiptIds.has(m.id))
+          .map((m: any) => ({
+            message_id: m.id,
+            user_id: currentUser.id,
+            read_at: new Date().toISOString()
+          }));
+        
+        if (receiptsToCreate.length > 0) {
+          await supabase
+            .from("message_read_receipts")
+            .insert(receiptsToCreate);
+        }
+      }
+    }
   }
 
   // Live translation updates (optional)
