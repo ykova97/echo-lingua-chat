@@ -672,7 +672,7 @@ const ChatList = () => {
       
       {/* Floating Bottom Nav */}
       <div className="fixed bottom-6 left-6 right-6 z-50">
-        <div className="card-float flex items-center justify-around py-3 px-6 max-w-4xl mx-auto">
+        <div className="card-float flex items-center justify-center gap-20 py-3 px-6 max-w-4xl mx-auto">
           <Button
             variant="ghost"
             size="icon"
@@ -680,13 +680,6 @@ const ChatList = () => {
             className="rounded-full hover:bg-accent/50 h-12 w-12"
           >
             <MessageCircle className="h-5 w-5 text-foreground/70" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full hover:bg-accent/50 h-12 w-12"
-          >
-            <span className="text-xl">📞</span>
           </Button>
           <Button
             onClick={() => navigate("/compose")}
@@ -700,14 +693,6 @@ const ChatList = () => {
             className="rounded-full hover:bg-accent/50 h-12 w-12"
           >
             <span className="text-xl">👥</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/settings")}
-            className="rounded-full hover:bg-accent/50 h-12 w-12"
-          >
-            <Settings className="h-5 w-5 text-foreground/70" />
           </Button>
         </div>
       </div>
