@@ -48,6 +48,26 @@ const ChatList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [greeting, setGreeting] = useState("");
+
+  // Update greeting based on time of day
+  useEffect(() => {
+    const updateGreeting = () => {
+      const hour = new Date().getHours();
+      if (hour < 12) {
+        setGreeting("Good morning");
+      } else if (hour < 18) {
+        setGreeting("Good afternoon");
+      } else {
+        setGreeting("Good evening");
+      }
+    };
+
+    updateGreeting();
+    // Update every minute to catch time changes
+    const interval = setInterval(updateGreeting, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -496,14 +516,14 @@ const ChatList = () => {
             </div>
             <div className="flex items-center gap-2">
               <div>
-                <h1 className="text-xl font-bold text-foreground">
-                  Good morning, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
+                <h1 className="text-xl font-bold text-foreground whitespace-nowrap">
+                  {greeting}, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
                 </h1>
                 <p className="text-xs text-muted-foreground">
                   {chats.filter(c => c.unread_count).length} new and {chats.length} active
                 </p>
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/50 text-xs font-medium">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/50 text-xs font-medium flex-shrink-0">
                 <Globe className="h-3 w-3" />
                 <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
               </div>
