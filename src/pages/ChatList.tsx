@@ -518,18 +518,16 @@ const ChatList = () => {
               <h1 className="text-xl font-bold text-foreground whitespace-nowrap">
                 {greeting}, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
               </h1>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {chats.filter(c => c.unread_count).length} new and {chats.length} active
-                </p>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary/50 text-xs font-medium">
-                  <Globe className="h-3 w-3" />
-                  <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                {chats.filter(c => c.unread_count).length} new and {chats.length} active
+              </p>
             </div>
           </div>
-          <div className="mt-6">
+          <div className="flex items-center gap-2 mt-6">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary/50 text-xs font-medium">
+              <Globe className="h-3 w-3" />
+              <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
+            </div>
             <Button
               variant="ghost"
               size="icon"
