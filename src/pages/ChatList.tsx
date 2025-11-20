@@ -468,26 +468,29 @@ const ChatList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen">
+      {/* Header with glass effect */}
+      <header className="glass border-b border-white/20 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-              <MessageCircle className="w-6 h-6 text-primary-foreground" />
-            </div>
+            <Avatar className="h-12 w-12 ring-2 ring-white/30">
+              <AvatarImage src={currentUser?.user_metadata?.profile_image} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white font-semibold">
+                {currentUser?.user_metadata?.name?.[0]}
+              </AvatarFallback>
+            </Avatar>
             <div>
-              <h1 className="text-xl font-bold">Link</h1>
-              <p className="text-xs text-muted-foreground font-medium">
-                {currentUser?.name || "User"}
+              <h1 className="text-xl font-bold">Good morning, {currentUser?.user_metadata?.name?.split(' ')[0]}</h1>
+              <p className="text-xs text-muted-foreground">
+                {chats.filter(c => c.unread_count).length} new and {chats.length} active
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} className="rounded-full hover:bg-white/50">
               <Settings className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleSignOut} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={handleSignOut} className="rounded-full hover:bg-white/50">
               <LogOut className="w-5 h-5" />
             </Button>
           </div>
@@ -495,35 +498,35 @@ const ChatList = () => {
       </header>
 
       {/* Search Bar */}
-      <div className="max-w-4xl mx-auto px-4 py-4 bg-background">
+      <div className="max-w-4xl mx-auto px-4 py-4">
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search chats"
+              placeholder="Ask Kinso"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-11 bg-secondary/50 border-border rounded-full"
+              className="pl-11 h-12 rounded-full glass border-white/30 focus-visible:ring-primary/50"
             />
           </div>
           <div className="flex gap-2">
-            <Button size="icon" onClick={() => setQrDialogOpen(true)} className="h-11 w-11 rounded-full" variant="outline">
+            <Button size="icon" onClick={() => setQrDialogOpen(true)} className="h-12 w-12 rounded-full glass border-white/30 hover:bg-white/50" variant="ghost">
               <QrCode className="w-5 h-5" />
             </Button>
-            <Button size="icon" onClick={() => navigate("/compose")} className="h-11 w-11 rounded-full">
+            <Button size="icon" onClick={() => navigate("/compose")} className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/80 hover:scale-110 transition-transform shadow-lg">
               <Plus className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Chat List */}
+      {/* Chat List with glass cards */}
       <main className="max-w-4xl mx-auto px-4 pb-6">
         {chats.length === 0 ? (
           <div className="text-center py-20 space-y-4">
-            <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mx-auto">
-              <MessageCircle className="w-10 h-10 text-muted-foreground" />
+            <div className="w-20 h-20 glass-card flex items-center justify-center mx-auto">
+              <MessageCircle className="w-10 h-10 text-primary" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-semibold">No conversations yet</h2>
@@ -540,30 +543,31 @@ const ChatList = () => {
                 return chatName.includes(query) || lastMessage.includes(query);
               })
               .map((chat) => (
-                <SwipeableChatItem
-                  key={chat.id}
-                  chatId={chat.id}
-                  chatName={getChatName(chat)}
-                  chatAvatar={getChatAvatar(chat)}
-                  lastMessage={chat.last_message?.text || "No messages yet"}
-                  lastMessageTime={
-                    chat.last_message
-                      ? new Date(chat.last_message.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : undefined
-                  }
-                  unreadCount={chat.unread_count}
-                  onChatClick={() => {
-                    // Clear unread count immediately in UI
-                    setChats(prev => 
-                      prev.map(c => c.id === chat.id ? { ...c, unread_count: 0 } : c)
-                    );
-                    navigate(`/chat/${chat.id}`);
-                  }}
-                  onDelete={(id) => setChatToDelete(id)}
-                />
+                <div key={chat.id} className="glass-card p-4 hover:shadow-xl hover:scale-[1.02] transition-all duration-200">
+                  <SwipeableChatItem
+                    chatId={chat.id}
+                    chatName={getChatName(chat)}
+                    chatAvatar={getChatAvatar(chat)}
+                    lastMessage={chat.last_message?.text || "No messages yet"}
+                    lastMessageTime={
+                      chat.last_message
+                        ? new Date(chat.last_message.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : undefined
+                    }
+                    unreadCount={chat.unread_count}
+                    onChatClick={() => {
+                      // Clear unread count immediately in UI
+                      setChats(prev => 
+                        prev.map(c => c.id === chat.id ? { ...c, unread_count: 0 } : c)
+                      );
+                      navigate(`/chat/${chat.id}`);
+                    }}
+                    onDelete={(id) => setChatToDelete(id)}
+                  />
+                </div>
               ))}
           </div>
         )}
