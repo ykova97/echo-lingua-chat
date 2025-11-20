@@ -138,7 +138,12 @@ export const SwipeableChatItem = ({
   return (
     <div ref={containerRef} className="relative overflow-hidden rounded-2xl touch-pan-y shadow-sm">
       {/* Delete Button Background */}
-      <div className="absolute right-0 top-0 bottom-0 w-20 bg-destructive rounded-2xl flex items-center justify-center">
+      <div 
+        className="absolute right-0 top-0 bottom-0 w-20 bg-destructive rounded-2xl flex items-center justify-center transition-opacity duration-200"
+        style={{
+          opacity: translateX < -10 ? 1 : 0,
+        }}
+      >
         <button
           onClick={handleDelete}
           className="w-full h-full flex items-center justify-center touch-manipulation"
@@ -154,7 +159,7 @@ export const SwipeableChatItem = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="w-full bg-card hover:bg-secondary/30 active:bg-secondary/50 rounded-2xl p-4 border border-border flex items-center gap-4 relative cursor-pointer touch-manipulation select-none transition-colors"
+        className="w-full bg-card hover:bg-secondary active:bg-secondary/80 rounded-2xl p-4 border border-border flex items-center gap-4 relative cursor-pointer touch-manipulation select-none transition-colors"
         style={{
           transform: `translateX(${translateX}px)`,
           transition: isSwiping ? 'none' : 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
