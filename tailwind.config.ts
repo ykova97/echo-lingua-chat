@@ -64,6 +64,11 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        cream: "hsl(var(--cream))",
+        coral: "hsl(var(--coral))",
+        teal: "hsl(var(--teal))",
+        "pale-orange": "hsl(var(--pale-orange))",
+        "pale-blue": "hsl(var(--pale-blue))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -71,7 +76,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        'glass': 'var(--glass-shadow)',
+        'soft': 'var(--shadow-soft)',
+        'card': 'var(--shadow-card)',
+        'float': 'var(--shadow-float)',
       },
       keyframes: {
         "accordion-down": {

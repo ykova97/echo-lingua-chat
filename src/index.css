@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 220 25% 97%;
+    --background: 40 33% 96%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
+    --primary: 10 100% 65%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 186 44% 50%;
+    --secondary-foreground: 0 0% 100%;
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
+    --accent: 20 100% 92%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --input: 0 0% 96%;
+    --ring: 10 100% 65%;
     --radius: 1rem;
     
     --sidebar-background: 0 0% 98%;
@@ -38,6 +38,26 @@
     --message-sent-foreground: 0 0% 100%;
     --message-received: 0 0% 95%;
     --message-received-foreground: 0 0% 29%;
+    
+    /* New design tokens */
+    --cream: 40 33% 96%;
+    --coral: 10 100% 65%;
+    --teal: 186 44% 50%;
+    --pale-orange: 20 100% 92%;
+    --pale-blue: 214 100% 96%;
+    
+    /* Gradients */
+    --gradient-header: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(20 100% 92%) 100%);
+    --gradient-coral: linear-gradient(135deg, hsl(25 100% 70%) 0%, hsl(10 100% 65%) 100%);
+    --gradient-teal: linear-gradient(135deg, hsl(186 44% 50%) 0%, hsl(200 60% 55%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(20 100% 98%) 0%, hsl(214 100% 98%) 100%);
+    --gradient-border: linear-gradient(135deg, hsl(25 100% 70%) 0%, hsl(10 100% 65%) 100%);
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(222 47% 11% / 0.08);
+    --shadow-card: 0 8px 40px -8px hsl(222 47% 11% / 0.12);
+    --shadow-float: 0 12px 48px -12px hsl(222 47% 11% / 0.15);
+    --shadow-inner: inset 0 2px 8px hsl(222 47% 11% / 0.06);
   }
 
   .dark {
@@ -85,24 +105,43 @@
   body {
     @apply bg-background text-foreground;
     background-image: 
-      radial-gradient(at 40% 20%, hsl(221 83% 53% / 0.1) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsl(250 83% 53% / 0.08) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, hsl(340 75% 55% / 0.05) 0px, transparent 50%);
+      repeating-linear-gradient(0deg, hsl(222 47% 11% / 0.02) 0px, transparent 1px, transparent 32px, hsl(222 47% 11% / 0.02) 33px),
+      repeating-linear-gradient(90deg, hsl(222 47% 11% / 0.02) 0px, transparent 1px, transparent 32px, hsl(222 47% 11% / 0.02) 33px),
+      linear-gradient(180deg, hsl(20 100% 98%) 0%, hsl(214 100% 98%) 100%);
     background-attachment: fixed;
   }
 }
 
 @layer utilities {
-  /* Glassmorphism */
-  .glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+  /* Soft modern card styles */
+  .card-soft {
+    @apply bg-card rounded-[18px];
+    box-shadow: var(--shadow-card);
   }
   
-  .glass-card {
-    @apply glass rounded-2xl shadow-lg;
+  .card-float {
+    @apply bg-card rounded-[20px];
+    box-shadow: var(--shadow-float);
+  }
+  
+  .gradient-header {
+    background: var(--gradient-header);
+  }
+  
+  .gradient-coral {
+    background: var(--gradient-coral);
+  }
+  
+  .gradient-teal {
+    background: var(--gradient-teal);
+  }
+  
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  
+  .shadow-inner-soft {
+    box-shadow: var(--shadow-inner);
   }
 
   /* iOS Safe Area Support */
