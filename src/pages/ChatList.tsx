@@ -502,7 +502,7 @@ const ChatList = () => {
       </header>
 
       {/* Search Bar */}
-      <div className="px-6 mb-6">
+      <div className="px-4 mb-6">
         <div className="relative">
           <div className="rounded-full bg-white shadow-inner-soft p-1 flex items-center gap-3" style={{ border: '1px solid transparent', backgroundImage: 'linear-gradient(white, white), var(--gradient-border)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
             <div className="flex-1 pl-4">
