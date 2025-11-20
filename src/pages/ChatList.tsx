@@ -504,8 +504,8 @@ const ChatList = () => {
     <div className="flex flex-col h-screen bg-background px-6 pt-6">
       {/* Header Card */}
       <header className="card-float gradient-header p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft">
               <Avatar className="h-full w-full">
                 <AvatarImage src={currentUser?.user_metadata?.profile_image} />
@@ -514,29 +514,31 @@ const ChatList = () => {
                 </AvatarFallback>
               </Avatar>
             </div>
-            <div className="flex items-center gap-2">
-              <div>
-                <h1 className="text-xl font-bold text-foreground whitespace-nowrap">
-                  {greeting}, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
-                </h1>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl font-bold text-foreground whitespace-nowrap">
+                {greeting}, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
+              </h1>
+              <div className="flex items-center gap-2">
                 <p className="text-xs text-muted-foreground">
                   {chats.filter(c => c.unread_count).length} new and {chats.length} active
                 </p>
-              </div>
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-secondary/50 text-xs font-medium flex-shrink-0">
-                <Globe className="h-3 w-3" />
-                <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary/50 text-xs font-medium">
+                  <Globe className="h-3 w-3" />
+                  <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
+                </div>
               </div>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/settings")}
-            className="rounded-full hover:bg-black/5 h-9 w-9"
-          >
-            <Settings className="h-4 w-4 text-foreground/60" />
-          </Button>
+          <div className="mt-6">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/settings")}
+              className="rounded-full hover:bg-black/5 h-8 w-8"
+            >
+              <Settings className="h-4 w-4 text-foreground/60" />
+            </Button>
+          </div>
         </div>
       </header>
 
