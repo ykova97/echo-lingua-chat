@@ -504,9 +504,9 @@ const ChatList = () => {
     <div className="flex flex-col h-screen bg-background px-6 pt-6">
       {/* Header Card */}
       <header className="card-float gradient-header p-4 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft flex-shrink-0">
               <Avatar className="h-full w-full">
                 <AvatarImage src={currentUser?.user_metadata?.profile_image} />
                 <AvatarFallback className="bg-transparent text-white text-xl">
@@ -514,16 +514,16 @@ const ChatList = () => {
                 </AvatarFallback>
               </Avatar>
             </div>
-            <div className="flex flex-col gap-1">
-              <h1 className="text-xl font-bold text-foreground whitespace-nowrap">
+            <div className="flex flex-col gap-1 min-w-0">
+              <h1 className="text-xl font-bold text-foreground truncate">
                 {greeting}, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 {chats.filter(c => c.unread_count).length} new and {chats.length} active
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-6">
+          <div className="flex items-center gap-2 mt-6 flex-shrink-0">
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary/50 text-xs font-medium">
               <Globe className="h-3 w-3" />
               <span className="uppercase">{currentUser?.preferred_language || 'en'}</span>
