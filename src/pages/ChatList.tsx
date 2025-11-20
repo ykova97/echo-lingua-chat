@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, Plus, LogOut, Settings, Search, QrCode, Globe } from "lucide-react";
+import { MessageCircle, Plus, LogOut, Settings, Search, QrCode, Globe, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { SwipeableChatItem } from "@/components/chat/SwipeableChatItem";
@@ -26,6 +26,7 @@ import {
 import { ChatListSkeleton } from "@/components/chat/ChatListSkeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProfileQRCode from "@/components/settings/ProfileQRCode";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 interface Chat {
   id: string;
@@ -51,6 +52,15 @@ const ChatList = () => {
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [greeting, setGreeting] = useState("");
+
+  // Pull to refresh
+  const { scrollContainerRef, pullDistance, isRefreshing, progress } = usePullToRefresh({
+    onRefresh: async () => {
+      await loadChats();
+    },
+    threshold: 80,
+    disabled: loading,
+  });
 
   // Update greeting based on time of day
   useEffect(() => {
@@ -593,9 +603,9 @@ const ChatList = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background px-6 pt-6">
+    <div className="flex flex-col h-screen bg-background">
       {/* Header Card */}
-      <header className="card-float gradient-header p-4 mb-6">
+      <header className="card-float gradient-header p-4 mb-6 mx-6 mt-6 flex-shrink-0">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-3 min-w-0 flex-1">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft flex-shrink-0">
@@ -633,7 +643,7 @@ const ChatList = () => {
       </header>
 
       {/* Search Bar */}
-      <div className="px-4 mb-6">
+      <div className="px-10 mb-6 flex-shrink-0">
         <div className="relative">
           <div className="rounded-full bg-white shadow-inner-soft p-1 flex items-center gap-3" style={{ border: '1px solid transparent', backgroundImage: 'linear-gradient(white, white), var(--gradient-border)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
             <div className="flex-1 pl-4">
@@ -655,8 +665,33 @@ const ChatList = () => {
         </div>
       </div>
 
-      {/* Chat List */}
-      <main className="px-6 pb-32 space-y-4">
+      {/* Scrollable Content with Pull to Refresh */}
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto px-6 pb-32"
+        style={{ overscrollBehavior: 'contain' }}
+      >
+        {/* Pull to Refresh Indicator */}
+        <div 
+          className="flex justify-center transition-all duration-200"
+          style={{ 
+            height: `${pullDistance}px`,
+            opacity: progress,
+          }}
+        >
+          <div className="flex items-center gap-2 text-primary">
+            <RefreshCw 
+              className={`h-5 w-5 transition-transform ${isRefreshing || progress >= 1 ? 'animate-spin' : ''}`}
+              style={{ transform: `rotate(${progress * 360}deg)` }}
+            />
+            <span className="text-sm font-medium">
+              {isRefreshing ? 'Refreshing...' : progress >= 1 ? 'Release to refresh' : 'Pull to refresh'}
+            </span>
+          </div>
+        </div>
+
+        {/* Chat List */}
+        <main className="space-y-4">
         {chats.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">No active chats</p>
@@ -709,6 +744,7 @@ const ChatList = () => {
           </div>
         )}
       </main>
+      </div>
       
       {/* Floating Bottom Nav */}
       <div className="fixed bottom-6 left-6 right-6 z-50">
