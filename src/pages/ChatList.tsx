@@ -470,36 +470,34 @@ const ChatList = () => {
   return (
     <div className="flex flex-col h-screen bg-background px-6 pt-6">
       {/* Header Card */}
-      <header className="card-float gradient-header p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft">
+      <header className="card-float gradient-header p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft">
               <Avatar className="h-full w-full">
                 <AvatarImage src={currentUser?.user_metadata?.profile_image} />
-                <AvatarFallback className="bg-transparent text-white text-2xl">
+                <AvatarFallback className="bg-transparent text-white text-xl">
                   {currentUser?.user_metadata?.name?.charAt(0) || currentUser?.email?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-xl font-bold text-foreground">
                 Good morning, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground">
                 {chats.filter(c => c.unread_count).length} new and {chats.length} active
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/settings")}
-              className="rounded-full hover:bg-black/5 h-10 w-10"
-            >
-              <Settings className="h-5 w-5 text-foreground/60" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/settings")}
+            className="rounded-full hover:bg-black/5 h-9 w-9"
+          >
+            <Settings className="h-4 w-4 text-foreground/60" />
+          </Button>
         </div>
       </header>
 
