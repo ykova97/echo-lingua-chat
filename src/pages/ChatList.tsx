@@ -468,73 +468,79 @@ const ChatList = () => {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header with glass effect */}
-      <header className="glass border-b border-white/20 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 ring-2 ring-white/30">
-              <AvatarImage src={currentUser?.user_metadata?.profile_image} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-white font-semibold">
-                {currentUser?.user_metadata?.name?.[0]}
-              </AvatarFallback>
-            </Avatar>
+    <div className="flex flex-col h-screen bg-background px-6 pt-6">
+      {/* Header Card */}
+      <header className="card-float gradient-header p-6 mb-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-coral to-primary flex items-center justify-center shadow-soft">
+              <Avatar className="h-full w-full">
+                <AvatarImage src={currentUser?.user_metadata?.profile_image} />
+                <AvatarFallback className="bg-transparent text-white text-2xl">
+                  {currentUser?.user_metadata?.name?.charAt(0) || currentUser?.email?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             <div>
-              <h1 className="text-xl font-bold">Good morning, {currentUser?.user_metadata?.name?.split(' ')[0]}</h1>
-              <p className="text-xs text-muted-foreground">
+              <h1 className="text-3xl font-bold text-foreground">
+                Good morning, {currentUser?.user_metadata?.name?.split(' ')[0] || 'User'}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 {chats.filter(c => c.unread_count).length} new and {chats.length} active
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} className="rounded-full hover:bg-white/50">
-              <Settings className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleSignOut} className="rounded-full hover:bg-white/50">
-              <LogOut className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/settings")}
+              className="rounded-full hover:bg-black/5 h-10 w-10"
+            >
+              <Settings className="h-5 w-5 text-foreground/60" />
             </Button>
           </div>
         </div>
       </header>
 
       {/* Search Bar */}
-      <div className="max-w-4xl mx-auto px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Ask Kinso"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-12 rounded-full glass border-white/30 focus-visible:ring-primary/50"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button size="icon" onClick={() => setQrDialogOpen(true)} className="h-12 w-12 rounded-full glass border-white/30 hover:bg-white/50" variant="ghost">
-              <QrCode className="w-5 h-5" />
-            </Button>
-            <Button size="icon" onClick={() => navigate("/compose")} className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/80 hover:scale-110 transition-transform shadow-lg">
-              <Plus className="w-5 h-5" />
+      <div className="px-6 mb-6">
+        <div className="relative">
+          <div className="rounded-full bg-white shadow-inner-soft p-1 flex items-center gap-3" style={{ border: '1px solid transparent', backgroundImage: 'linear-gradient(white, white), var(--gradient-border)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
+            <div className="flex-1 pl-4">
+              <Input
+                placeholder="Ask Kinso"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border-0 bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/60 h-10 px-0"
+              />
+            </div>
+            <Button
+              size="icon"
+              onClick={() => setQrDialogOpen(true)}
+              className="rounded-full h-10 w-10 gradient-coral shadow-soft hover:scale-105 transition-transform"
+            >
+              <QrCode className="h-5 w-5 text-white" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Chat List with glass cards */}
-      <main className="max-w-4xl mx-auto px-4 pb-6">
+      {/* Chat List */}
+      <main className="px-6 pb-32 space-y-4">
         {chats.length === 0 ? (
-          <div className="text-center py-20 space-y-4">
-            <div className="w-20 h-20 glass-card flex items-center justify-center mx-auto">
-              <MessageCircle className="w-10 h-10 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold">No conversations yet</h2>
-              <p className="text-muted-foreground">Start a new chat to begin messaging</p>
-            </div>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">No active chats</p>
+            <Button
+              onClick={() => navigate("/compose")}
+              className="rounded-full gradient-coral shadow-soft hover:scale-105 transition-transform"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Start New Chat
+            </Button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {chats
               .filter((chat) => {
                 const chatName = getChatName(chat).toLowerCase();
@@ -543,7 +549,10 @@ const ChatList = () => {
                 return chatName.includes(query) || lastMessage.includes(query);
               })
               .map((chat) => (
-                <div key={chat.id} className="glass-card p-4 hover:shadow-xl hover:scale-[1.02] transition-all duration-200">
+                <div
+                  key={chat.id}
+                  className="card-soft hover:shadow-float transition-all duration-300"
+                >
                   <SwipeableChatItem
                     chatId={chat.id}
                     chatName={getChatName(chat)}
@@ -559,19 +568,60 @@ const ChatList = () => {
                     }
                     unreadCount={chat.unread_count}
                     onChatClick={() => {
-                      // Clear unread count immediately in UI
                       setChats(prev => 
                         prev.map(c => c.id === chat.id ? { ...c, unread_count: 0 } : c)
                       );
                       navigate(`/chat/${chat.id}`);
                     }}
-                    onDelete={(id) => setChatToDelete(id)}
+                    onDelete={() => setChatToDelete(chat.id)}
                   />
                 </div>
               ))}
           </div>
         )}
       </main>
+      
+      {/* Floating Bottom Nav */}
+      <div className="fixed bottom-6 left-6 right-6 z-50">
+        <div className="card-float flex items-center justify-around py-3 px-6 max-w-4xl mx-auto">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/chats")}
+            className="rounded-full hover:bg-accent/50 h-12 w-12"
+          >
+            <MessageCircle className="h-5 w-5 text-foreground/70" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full hover:bg-accent/50 h-12 w-12"
+          >
+            <span className="text-xl">📞</span>
+          </Button>
+          <Button
+            onClick={() => navigate("/compose")}
+            className="rounded-full h-16 w-16 gradient-coral shadow-float hover:scale-110 transition-transform -mt-8"
+          >
+            <Plus className="h-7 w-7 text-white" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full hover:bg-accent/50 h-12 w-12"
+          >
+            <span className="text-xl">👥</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/settings")}
+            className="rounded-full hover:bg-accent/50 h-12 w-12"
+          >
+            <Settings className="h-5 w-5 text-foreground/70" />
+          </Button>
+        </div>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!chatToDelete} onOpenChange={() => setChatToDelete(null)}>
