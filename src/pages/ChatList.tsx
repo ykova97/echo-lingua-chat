@@ -305,127 +305,138 @@ const ChatList = () => {
         .eq("user_id", user.id);
 
       if (error) throw error;
+      if (!chatParticipants || chatParticipants.length === 0) {
+        setChats([]);
+        setLoading(false);
+        return;
+      }
 
-      // Get participants for each chat
-      const chatsWithDetails = await Promise.all(
-        (chatParticipants || []).map(async (cp: any) => {
-          const chat = cp.chats;
-          
-          // Get all participants
-          const { data: participantIds } = await supabase
-            .from("chat_participants")
-            .select("user_id")
-            .eq("chat_id", chat.id);
+      const chatIds = chatParticipants.map((cp: any) => cp.chat_id);
 
-          // Fetch data for each participant (could be profile or guest)
-          const participants = await Promise.all(
-            (participantIds || []).map(async (p: any) => {
-              // Try to get profile first
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("name, profile_image, preferred_language")
-                .eq("id", p.user_id)
-                .maybeSingle();
+      // Batch fetch: Get ALL participants for ALL chats in one query
+      const { data: allParticipants } = await supabase
+        .from("chat_participants")
+        .select("chat_id, user_id")
+        .in("chat_id", chatIds);
 
-              if (profile) {
-                return {
-                  user_id: p.user_id,
-                  profiles: profile
-                };
-              }
+      // Get unique user IDs
+      const uniqueUserIds = [...new Set((allParticipants || []).map((p: any) => p.user_id))];
 
-              // If no profile, check if it's a guest
-              const { data: guest } = await supabase
-                .from("guest_sessions")
-                .select("display_name, preferred_language")
-                .eq("id", p.user_id)
-                .maybeSingle();
+      // Batch fetch: Get ALL profiles in one query
+      const { data: allProfiles } = await supabase
+        .from("profiles")
+        .select("id, name, profile_image, preferred_language")
+        .in("id", uniqueUserIds);
 
-              if (guest) {
-                return {
-                  user_id: p.user_id,
-                  profiles: {
-                    name: guest.display_name,
-                    profile_image: null,
-                    preferred_language: guest.preferred_language
-                  }
-                };
-              }
+      // Batch fetch: Get ALL guest sessions in one query
+      const { data: allGuests } = await supabase
+        .from("guest_sessions")
+        .select("id, display_name, preferred_language")
+        .in("id", uniqueUserIds);
 
-              // Fallback for unknown participants
-              return {
-                user_id: p.user_id,
-                profiles: {
-                  name: "Unknown User",
-                  profile_image: null,
-                  preferred_language: "en"
-                }
-              };
-            })
-          );
+      // Create lookup maps for fast access
+      const profileMap = new Map((allProfiles || []).map((p: any) => [p.id, p]));
+      const guestMap = new Map((allGuests || []).map((g: any) => [g.id, g]));
+      const participantsByChatId = new Map<string, any[]>();
+      
+      (allParticipants || []).forEach((p: any) => {
+        if (!participantsByChatId.has(p.chat_id)) {
+          participantsByChatId.set(p.chat_id, []);
+        }
+        const profile = profileMap.get(p.user_id);
+        const guest = guestMap.get(p.user_id);
+        
+        participantsByChatId.get(p.chat_id)!.push({
+          user_id: p.user_id,
+          profiles: profile || (guest ? {
+            name: guest.display_name,
+            profile_image: null,
+            preferred_language: guest.preferred_language
+          } : {
+            name: "Unknown User",
+            profile_image: null,
+            preferred_language: "en"
+          })
+        });
+      });
 
-          // Get last message with translation
-          const { data: lastMessage } = await supabase
-            .from("messages")
-            .select("id, original_text, created_at")
-            .eq("chat_id", chat.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single();
+      // Batch fetch: Get last message for each chat
+      const { data: allLastMessages } = await supabase
+        .from("messages")
+        .select("id, chat_id, original_text, created_at, sender_id")
+        .in("chat_id", chatIds)
+        .order("created_at", { ascending: false });
 
-          // Get translation for user's preferred language if last message exists
-          let translatedText = lastMessage?.original_text;
-          if (lastMessage && currentUser?.preferred_language) {
-            const { data: translation } = await supabase
-              .from("message_translations")
-              .select("translated_text")
-              .eq("message_id", lastMessage.id)
-              .eq("user_id", user.id)
-              .eq("target_language", currentUser.preferred_language)
-              .maybeSingle();
-            
-            if (translation) {
-              translatedText = translation.translated_text;
-            }
-          }
+      // Group messages by chat and get the last one
+      const lastMessageByChat = new Map<string, any>();
+      (allLastMessages || []).forEach((msg: any) => {
+        if (!lastMessageByChat.has(msg.chat_id)) {
+          lastMessageByChat.set(msg.chat_id, msg);
+        }
+      });
 
-          // Get unread count
-          const { data: messages } = await supabase
-            .from("messages")
-            .select("id")
-            .eq("chat_id", chat.id)
-            .neq("sender_id", user.id);
+      // Get message IDs for translation lookup
+      const messageIds = Array.from(lastMessageByChat.values()).map(m => m.id);
 
-          let unreadCount = 0;
-          if (messages) {
-            for (const msg of messages) {
-              const { data: readReceipt } = await supabase
-                .from("message_read_receipts")
-                .select("id")
-                .eq("message_id", msg.id)
-                .eq("user_id", user.id)
-                .maybeSingle();
-              
-              if (!readReceipt) {
-                unreadCount++;
-              }
-            }
-          }
+      // Batch fetch: Get ALL translations in one query
+      const { data: allTranslations } = await supabase
+        .from("message_translations")
+        .select("message_id, translated_text, target_language")
+        .in("message_id", messageIds)
+        .eq("user_id", user.id)
+        .eq("target_language", currentUser?.preferred_language || "en");
 
-          return {
-            ...chat,
-            participants: participants || [],
-            last_message: lastMessage ? {
-              text: translatedText,
-              created_at: lastMessage.created_at,
-            } : undefined,
-            unread_count: unreadCount,
-          };
-        })
-      );
+      const translationMap = new Map((allTranslations || []).map((t: any) => [t.message_id, t.translated_text]));
+
+      // Batch fetch: Get ALL messages from others for unread count
+      const { data: allMessagesFromOthers } = await supabase
+        .from("messages")
+        .select("id, chat_id, sender_id")
+        .in("chat_id", chatIds)
+        .neq("sender_id", user.id);
+
+      // Get all message IDs to check read receipts
+      const otherMessageIds = (allMessagesFromOthers || []).map((m: any) => m.id);
+
+      // Batch fetch: Get ALL read receipts in one query
+      const { data: allReadReceipts } = await supabase
+        .from("message_read_receipts")
+        .select("message_id, user_id")
+        .in("message_id", otherMessageIds)
+        .eq("user_id", user.id);
+
+      const readReceiptSet = new Set((allReadReceipts || []).map((r: any) => r.message_id));
+
+      // Calculate unread counts per chat
+      const unreadCountByChat = new Map<string, number>();
+      (allMessagesFromOthers || []).forEach((msg: any) => {
+        if (!readReceiptSet.has(msg.id)) {
+          unreadCountByChat.set(msg.chat_id, (unreadCountByChat.get(msg.chat_id) || 0) + 1);
+        }
+      });
+
+      // Assemble final chat data
+      const chatsWithDetails = chatParticipants.map((cp: any) => {
+        const chat = cp.chats;
+        const lastMessage = lastMessageByChat.get(chat.id);
+        const translatedText = lastMessage 
+          ? (translationMap.get(lastMessage.id) || lastMessage.original_text)
+          : undefined;
+
+        return {
+          ...chat,
+          participants: participantsByChatId.get(chat.id) || [],
+          last_message: lastMessage ? {
+            text: translatedText,
+            created_at: lastMessage.created_at,
+          } : undefined,
+          unread_count: unreadCountByChat.get(chat.id) || 0,
+        };
+      });
 
       setChats(chatsWithDetails);
     } catch (error: any) {
+      console.error("Error loading chats:", error);
       toast({
         title: "Error loading chats",
         description: error.message,
