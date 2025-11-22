@@ -116,8 +116,7 @@ export default function Chat() {
           created_at: m.created_at,
           media_url: m.attachment_url
         };
-      })
-      .reverse();
+      });
 
     setMessages(assembled);
     
