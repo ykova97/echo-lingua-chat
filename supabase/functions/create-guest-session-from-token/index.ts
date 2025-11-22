@@ -211,10 +211,10 @@ serve(async (req) => {
     console.log("Guest session created successfully");
 
     // Generate JWT for guest with chat_id claim
-    const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET");
+    const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("GUEST_JWT_SECRET");
     if (!jwtSecret) {
-      console.error("SUPABASE_JWT_SECRET not configured");
-      throw new Error("SUPABASE_JWT_SECRET not configured");
+      console.error("JWT secret not configured");
+      throw new Error("JWT secret not configured");
     }
 
     // Import jose for JWT generation
