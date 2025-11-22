@@ -72,8 +72,9 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Build the share URL with hardcoded domain
-    const shareUrl = `https://lynk-chat.com/guest/${token}`;
+    // Build the share URL using PUBLIC_APP_URL environment variable
+    const baseUrl = Deno.env.get("PUBLIC_APP_URL") || "https://lynk-chat.com";
+    const shareUrl = `${baseUrl.replace(/\/$/, "")}/guest/${token}`;
 
     console.log("Share link generated successfully:", shareUrl);
 
