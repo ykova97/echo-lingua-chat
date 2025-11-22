@@ -63,6 +63,7 @@ serve(async (req) => {
       .insert({
         chat_id: chatId,
         sender_id: user.id,
+        sender_type: 'user',
         original_text: message,
         source_language: sourceLanguage || "en",
         reply_to_id: replyToId || null,
