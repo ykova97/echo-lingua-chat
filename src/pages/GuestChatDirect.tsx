@@ -202,14 +202,14 @@ export default function GuestChatDirect() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <header className="border-b border-border p-4">
+    <div className="flex flex-col h-screen bg-background" style={{ height: '100dvh' }}>
+      <header className="border-b border-border p-4 flex-shrink-0">
         <h1 className="text-xl font-semibold text-center text-foreground">
           You are now connected
         </h1>
       </header>
 
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 p-4 overflow-y-auto" ref={scrollRef}>
         <div className="space-y-3 max-w-2xl mx-auto">
           {messages.length === 0 ? (
             <p className="text-center text-muted-foreground">No messages yet</p>
@@ -239,8 +239,8 @@ export default function GuestChatDirect() {
         </div>
       </ScrollArea>
 
-      <div className="border-t border-border p-4">
-        <div className="flex gap-2 max-w-2xl mx-auto">
+      <div className="border-t border-border p-4 bg-background flex-shrink-0 safe-bottom">
+        <div className="flex gap-2 max-w-2xl mx-auto pb-safe">
           <Input
             value={newMessageText}
             onChange={(e) => setNewMessageText(e.target.value)}
