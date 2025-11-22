@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import { createClient } from "@supabase/supabase-js";
 import { createGuestSession } from "@/lib/createGuestSession";
 
+const SUPABASE_URL = "https://zakhdgsapuahjuqsbsfd.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpha2hkZ3NhcHVhaGp1cXNic2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNjI5NTMsImV4cCI6MjA3NjczODk1M30.7lmWAZSEjHsF6IE1eekVZi_8PPXczm9jN-pk6i2cBPE";
+
 interface Message {
   id: string;
   content: string;
@@ -44,8 +47,8 @@ export default function GuestChatDirect() {
         
         // Load messages
         const client = createClient(
-          import.meta.env.VITE_SUPABASE_URL,
-          import.meta.env.VITE_SUPABASE_ANON_KEY,
+          SUPABASE_URL,
+          SUPABASE_ANON_KEY,
           {
             global: {
               headers: { Authorization: `Bearer ${result.guest_jwt}` }
