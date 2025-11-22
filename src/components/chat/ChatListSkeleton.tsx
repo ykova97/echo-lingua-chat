@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const ChatListSkeleton = () => {
   return (
     <div className="space-y-3 px-4">
-      {[...Array(8)].map((_, i) => (
+      {[...Array(20)].map((_, i) => (
         <div 
           key={i} 
           className="card-soft p-4 flex items-center gap-4 animate-fade-in"
