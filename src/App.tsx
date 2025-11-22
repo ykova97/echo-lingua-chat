@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import GuestJoin from "@/pages/GuestJoin";
 import GuestChat from "@/pages/GuestChat";
+import GuestSessionTest from "@/pages/GuestSessionTest";
 
 // Lazy load non-critical routes
 const ChatList = lazy(() => import("./pages/ChatList"));
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/guest/:token" element={<GuestJoin />} />
             <Route path="/join/:slug" element={<GuestJoin />} />
             <Route path="/guest-chat/:chatId" element={<GuestChat />} />
+            <Route path="/guest-session-test" element={<GuestSessionTest />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
