@@ -210,29 +210,26 @@ serve(async (req) => {
 
     console.log("Guest session created successfully");
 
-    // Generate JWT for guest with chat_id claim
-    const jwtSecret = Deno.env.get("SUPABASE_JWT_SECRET") || Deno.env.get("GUEST_JWT_SECRET");
+    // Generate JWT for guest with required claims
+    const jwtSecret = Deno.env.get("GUEST_JWT_SECRET");
     if (!jwtSecret) {
-      console.error("JWT secret not configured");
-      throw new Error("JWT secret not configured");
+      console.error("GUEST_JWT_SECRET not configured");
+      throw new Error("GUEST_JWT_SECRET not configured");
     }
 
     // Import jose for JWT generation
     const { SignJWT } = await import("https://deno.land/x/jose@v5.1.0/index.ts");
     
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const nowTimestamp = Math.floor(Date.now() / 1000);
     
     const guestJwt = await new SignJWT({
-      aud: "authenticated",
-      exp: nowTimestamp + (24 * 60 * 60), // 24 hours
-      iat: nowTimestamp,
-      iss: supabaseUrl,
-      sub: guestSession.id,
+      guest_session_id: guestSession.id,
       chat_id: chat.id,
-      role: "anon",
+      exp: nowTimestamp + (24 * 60 * 60), // 24 hours
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setIssuedAt()
+      .setExpirationTime("24h")
       .sign(new TextEncoder().encode(jwtSecret));
 
     console.log("Generated JWT for guest");
