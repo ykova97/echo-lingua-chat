@@ -19,6 +19,8 @@ interface Message {
 export default function GuestChatDirect() {
   const { token } = useParams<{ token: string }>();
   
+  console.log("🔴 GuestChatDirect component mounted, token:", token);
+  
   const [conversationId, setConversationId] = useState<string>("");
   const [guestId, setGuestId] = useState<string>("");
   const [guestJwt, setGuestJwt] = useState<string>("");
