@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import QRCode from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
+import { generateShareLink } from "@/lib/generateShareLink";
+import { useToast } from "@/hooks/use-toast";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BASE = `${SUPABASE_URL}/functions/v1`;
@@ -25,6 +27,8 @@ export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const { toast } = useToast();
 
   const generateQRCode = async () => {
     try {
@@ -72,6 +76,32 @@ export default function ProfileQRCode() {
     }
   };
 
+  const handleGenerateShareLink = async () => {
+    try {
+      setGeneratingLink(true);
+      const result = await generateShareLink();
+      
+      toast({
+        title: "Share link generated!",
+        description: "Link copied to clipboard",
+      });
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(result.share_url);
+      
+      // Also update the QR code with this link
+      setInviteUrl(result.share_url);
+    } catch (err: any) {
+      toast({
+        title: "Failed to generate link",
+        description: err?.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
   useEffect(() => {
     generateQRCode();
   }, []);
@@ -84,12 +114,19 @@ export default function ProfileQRCode() {
     <div className="flex flex-col items-center gap-3">
       <QRCode value={inviteUrl} size={220} />
       <div className="text-xs break-all text-muted-foreground">{inviteUrl}</div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap justify-center">
         <Button variant="outline" onClick={() => navigator.clipboard.writeText(inviteUrl)}>
           Copy link
         </Button>
         <Button variant="outline" onClick={generateQRCode} disabled={loading}>
           {loading ? "Regenerating..." : "Regenerate"}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleGenerateShareLink}
+          disabled={generatingLink}
+        >
+          {generatingLink ? "Generating..." : "New Share Link"}
         </Button>
         <Button
           onClick={() => {
@@ -99,7 +136,7 @@ export default function ProfileQRCode() {
           Share
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Scan to start a temporary chat.</p>
+      <p className="text-xs text-muted-foreground">Scan to start a temporary chat. Share links expire in 24h with max 10 uses.</p>
     </div>
   );
 }
