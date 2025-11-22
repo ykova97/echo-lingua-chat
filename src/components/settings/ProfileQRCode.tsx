@@ -5,9 +5,21 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BASE = `${SUPABASE_URL}/functions/v1`;
-// Use deployed lovableproject.com URL instead of preview URL
-const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-const ORIGIN = `https://${PROJECT_ID}.lovableproject.com`;
+// Extract Lovable project ID from current URL (works in preview and deployed)
+const getLovableProjectUrl = () => {
+  const currentOrigin = window.location.origin;
+  // If already on lovableproject.com, use current origin
+  if (currentOrigin.includes('.lovableproject.com')) {
+    return currentOrigin;
+  }
+  // Fallback to extracting from preview URL pattern
+  const match = currentOrigin.match(/https:\/\/([a-f0-9-]+)--/);
+  if (match) {
+    return `https://${match[1]}.lovableproject.com`;
+  }
+  return currentOrigin;
+};
+const ORIGIN = getLovableProjectUrl();
 
 export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
