@@ -72,18 +72,24 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Build the share URL using PUBLIC_APP_URL environment variable
-    const baseUrl = Deno.env.get("PUBLIC_APP_URL") || "https://lynk-chat.com";
-    const shareUrl = `${baseUrl.replace(/\/$/, "")}/guest/${token}`;
+    // Read PUBLIC_APP_URL environment variable
+    const envValue = Deno.env.get("PUBLIC_APP_URL");
+    console.log("PUBLIC_APP_URL env value:", envValue);
+    
+    // Build the share URL
+    const baseUrl = envValue || "https://lynk-chat.com";
+    const cleanBaseUrl = baseUrl.replace(/\/$/, "");
+    const shareUrl = `${cleanBaseUrl}/guest/${token}`;
 
-    console.log("Share link generated successfully:", shareUrl);
+    console.log("Final share URL:", shareUrl);
 
     return new Response(
       JSON.stringify({ 
         share_url: shareUrl,
         token: token,
         expires_at: expiresAt,
-        max_uses: 10
+        max_uses: 10,
+        debug_base_url: baseUrl
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
