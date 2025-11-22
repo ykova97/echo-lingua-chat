@@ -84,7 +84,7 @@ serve(async (req) => {
 
     if (partErr) throw partErr;
 
-    // 3) Profiles → preferred_language map
+    // 3) Profiles → preferred_language map (only for actual users, not guests)
     const userIds = participants.map((p) => p.user_id);
     const { data: profiles, error: profErr } = await supabaseAdmin
       .from("profiles")
@@ -93,14 +93,19 @@ serve(async (req) => {
 
     if (profErr) throw profErr;
 
+    // Create a set of valid profile IDs (excludes guests)
+    const validProfileIds = new Set((profiles || []).map((p) => p.id));
     const langMap = new Map<string, string>((profiles || []).map((p) => [p.id, p.preferred_language || "en"]));
 
     // 4) Determine source language (detect lazily if not provided & not empty)
     const srcLang = sourceLanguage && sourceLanguage.trim() !== "" ? sourceLanguage : "auto";
 
-    // 5) Group recipients by target language
+    // 5) Group recipients by target language (only actual users with profiles)
     const byLang = new Map<string, string[]>(); // lang -> [userIds]
     for (const p of participants) {
+      // Skip if this participant is not in profiles (i.e., is a guest)
+      if (!validProfileIds.has(p.user_id)) continue;
+      
       const lang = langMap.get(p.user_id) || "en";
       if (!byLang.has(lang)) byLang.set(lang, []);
       byLang.get(lang)!.push(p.user_id);
