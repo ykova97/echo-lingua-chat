@@ -22,6 +22,21 @@ export default function GuestChatDirect() {
   const { token } = useParams<{ token: string }>();
   console.log("🟡🟡🟡 Token from params:", token);
   
+  // Force immediate render
+  if (!token) {
+    console.error("❌ NO TOKEN FOUND");
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-red-500">
+        <div className="text-center text-white">
+          <p className="text-2xl font-bold">NO TOKEN - GUEST CHAT LOADED</p>
+          <p>Token is missing from URL</p>
+        </div>
+      </div>
+    );
+  }
+  
+  console.log("✅ Token exists:", token);
+  
   const [conversationId, setConversationId] = useState<string>("");
   const [guestId, setGuestId] = useState<string>("");
   const [guestJwt, setGuestJwt] = useState<string>("");
