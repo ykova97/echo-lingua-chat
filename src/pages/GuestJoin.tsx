@@ -70,6 +70,7 @@ export default function GuestJoin() {
       sessionStorage.setItem("guestJwt", data.guestJwt);
       sessionStorage.setItem("guestChatId", data.chatId);
       sessionStorage.setItem("guestName", name.trim());
+      sessionStorage.setItem("guestSessionId", data.guest?.id || "");
 
       navigate(`/guest-chat/${data.chatId}`);
     } catch (err: any) {

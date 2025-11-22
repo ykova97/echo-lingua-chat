@@ -35,6 +35,7 @@ export default function GuestChat() {
   // Helper: guest info
   const guestJwt = sessionStorage.getItem("guestJwt") || "";
   const guestName = sessionStorage.getItem("guestName") || "Guest";
+  const guestSessionId = sessionStorage.getItem("guestSessionId") || "";
 
   // Auto-scroll to bottom when messages update
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function GuestChat() {
     }
   }, [messages]);
 
-  // Load initial messages (mocked simple fetch – adjust if you use Realtime DB)
+  // Load initial messages
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -52,7 +53,7 @@ export default function GuestChat() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ chatId }),
+          body: JSON.stringify({ chatId, guestJwt }),
         });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
@@ -68,8 +69,31 @@ export default function GuestChat() {
         setLoading(false);
       }
     };
-    if (chatId) fetchMessages();
-  }, [chatId]);
+    if (chatId && guestJwt) fetchMessages();
+  }, [chatId, guestJwt, toast]);
+
+  // Subscribe to new messages
+  useEffect(() => {
+    if (!chatId) return;
+
+    const pollMessages = setInterval(async () => {
+      try {
+        const res = await fetch(`${BASE}/load-chat-messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId, guestJwt }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data.messages || []);
+        }
+      } catch (err) {
+        console.error("Error polling messages:", err);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(pollMessages);
+  }, [chatId, guestJwt]);
 
   // Send message handler
   const handleSend = async () => {
@@ -96,7 +120,8 @@ export default function GuestChat() {
         ...prev,
         {
           id: data.id || Date.now().toString(),
-          sender_id: "guest",
+          sender_id: guestSessionId,
+          sender_name: guestName,
           original_text: newMessage.trim(),
           source_language: "auto",
           created_at: new Date().toISOString(),
@@ -155,9 +180,9 @@ export default function GuestChat() {
             <MessageBubble
               key={msg.id}
               message={msg}
-              isOwn={msg.sender_id === "guest"}
+              isOwn={msg.sender_id === guestSessionId}
               showOriginal={false}
-              currentUserId="guest"
+              currentUserId={guestSessionId}
               onToggleOriginal={() => {}}
             />
           ))}
