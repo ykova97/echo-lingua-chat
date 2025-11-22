@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+console.log("✅ GuestChatDirect module loaded");
+
 interface Message {
   id: string;
   content: string;
@@ -16,7 +18,11 @@ interface Message {
 }
 
 export default function GuestChatDirect() {
+  console.log("🚀 GuestChatDirect component rendering");
+  
   const { token } = useParams<{ token: string }>();
+  console.log("🔑 Token from params:", token);
+  
   const [conversationId, setConversationId] = useState<string>("");
   const [guestId, setGuestId] = useState<string>("");
   const [guestJwt, setGuestJwt] = useState<string>("");
@@ -38,7 +44,10 @@ export default function GuestChatDirect() {
   };
 
   useEffect(() => {
+    console.log("🔄 useEffect triggered");
+    
     if (!token) {
+      console.error("❌ No token provided");
       setError("No token provided");
       setLoading(false);
       return;
@@ -46,9 +55,12 @@ export default function GuestChatDirect() {
 
     const init = async () => {
       try {
+        console.log("📞 Calling createGuestSession...");
         const result = await createGuestSession({ token });
+        console.log("📦 createGuestSession result:", result);
         
         if ('error' in result) {
+          console.error("❌ Error in result:", result.error);
           setError(result.error === 'invalid_or_expired' 
             ? "This link has expired. Ask them to show a new QR." 
             : String(result.error));
@@ -56,10 +68,12 @@ export default function GuestChatDirect() {
           return;
         }
 
+        console.log("✅ Session created successfully");
         setConversationId(result.conversation_id);
         setGuestId(result.guest_id);
         setGuestJwt(result.guest_jwt);
         
+        console.log("📨 Loading initial messages...");
         // Load initial messages
         const client = createClient(
           import.meta.env.VITE_SUPABASE_URL,
@@ -71,11 +85,17 @@ export default function GuestChatDirect() {
           }
         );
         
-        const { data: msgs } = await client
+        const { data: msgs, error: msgError } = await client
           .from("messages")
           .select("id, original_text, sender_type, created_at")
           .eq("chat_id", result.conversation_id)
           .order("created_at", { ascending: true });
+
+        if (msgError) {
+          console.error("❌ Error loading messages:", msgError);
+        } else {
+          console.log("✅ Loaded messages:", msgs?.length || 0);
+        }
 
         if (msgs) {
           setMessages(msgs.map((msg) => ({
@@ -86,9 +106,11 @@ export default function GuestChatDirect() {
           })));
         }
         
+        console.log("✅ Initialization complete");
         setLoading(false);
         scrollToBottom();
       } catch (err: any) {
+        console.error("❌ Init error:", err);
         setError(err?.message || "Failed to join chat");
         setLoading(false);
       }
@@ -99,8 +121,13 @@ export default function GuestChatDirect() {
 
   // Real-time subscription
   useEffect(() => {
-    if (!conversationId || !guestJwt) return;
+    if (!conversationId || !guestJwt) {
+      console.log("⏸️ Skipping realtime setup (no conversation or jwt)");
+      return;
+    }
 
+    console.log("🔴 Setting up realtime subscription");
+    
     const client = createClient(
       import.meta.env.VITE_SUPABASE_URL,
       import.meta.env.VITE_SUPABASE_ANON_KEY,
@@ -122,6 +149,7 @@ export default function GuestChatDirect() {
           filter: `chat_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log("📩 New message received:", payload);
           const newMsg = payload.new as any;
           setMessages((prev) => [
             ...prev,
@@ -138,6 +166,7 @@ export default function GuestChatDirect() {
       .subscribe();
 
     return () => {
+      console.log("🔌 Cleaning up realtime subscription");
       client.removeChannel(channel);
     };
   }, [conversationId, guestJwt]);
@@ -145,6 +174,7 @@ export default function GuestChatDirect() {
   const handleSend = async () => {
     if (!newMessageText.trim() || !guestJwt || !conversationId) return;
 
+    console.log("📤 Sending message...");
     setSending(true);
     try {
       const client = createClient(
@@ -165,11 +195,16 @@ export default function GuestChatDirect() {
         source_language: "en",
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Send error:", error);
+        throw error;
+      }
 
+      console.log("✅ Message sent");
       setNewMessageText("");
       scrollToBottom();
     } catch (err: any) {
+      console.error("❌ handleSend error:", err);
       toast({
         title: "Failed to send message",
         description: err?.message || "Please try again",
@@ -179,6 +214,8 @@ export default function GuestChatDirect() {
       setSending(false);
     }
   };
+
+  console.log("🎨 Rendering, loading:", loading, "error:", error);
 
   if (loading) {
     return (
