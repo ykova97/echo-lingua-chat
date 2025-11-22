@@ -8,6 +8,7 @@ export interface CreateGuestSessionParams {
 export interface CreateGuestSessionResponse {
   conversation_id: string;
   guest_id: string;
+  guest_jwt: string;
 }
 
 export interface GuestSessionError {
