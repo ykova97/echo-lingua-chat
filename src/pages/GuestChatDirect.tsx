@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+console.log("🟢🟢🟢 GuestChatDirect module loaded");
+
 interface Message {
   id: string;
   content: string;
@@ -16,7 +18,9 @@ interface Message {
 }
 
 export default function GuestChatDirect() {
+  console.log("🔵🔵🔵 GuestChatDirect component rendering");
   const { token } = useParams<{ token: string }>();
+  console.log("🟡🟡🟡 Token from params:", token);
   
   const [conversationId, setConversationId] = useState<string>("");
   const [guestId, setGuestId] = useState<string>("");
