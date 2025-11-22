@@ -595,7 +595,7 @@ const ChatList = () => {
         </div>
 
         {/* Chat List Skeleton */}
-        <main className="px-6 pb-32">
+        <main className="flex-1 overflow-y-auto px-6 pb-32">
           <ChatListSkeleton />
         </main>
       </div>
