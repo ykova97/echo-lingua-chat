@@ -151,15 +151,73 @@ export default function Chat() {
     }
   }
 
-  // Live translation updates (optional)
+  // Real-time message and translation updates
   useEffect(() => {
     if (!currentUser?.id || !chatId) return;
+    
     const ch = supabase
-      .channel(`chat:${chatId}:translations:${currentUser.id}`)
+      .channel(`chat:${chatId}:updates:${currentUser.id}`)
+      // Listen for new messages
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `chat_id=eq.${chatId}` },
+        async (payload) => {
+          const newMsg = payload.new as any;
+          console.log('New message received:', newMsg);
+          
+          // Fetch sender info
+          let senderName = "Unknown";
+          let senderImage = null;
+          
+          if (newMsg.sender_type === 'user') {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('name, profile_image')
+              .eq('id', newMsg.sender_id)
+              .single();
+            if (profile) {
+              senderName = profile.name;
+              senderImage = profile.profile_image;
+            }
+          } else if (newMsg.sender_type === 'guest') {
+            const { data: guest } = await supabase
+              .from('guest_sessions')
+              .select('display_name')
+              .eq('id', newMsg.sender_id)
+              .single();
+            if (guest) {
+              senderName = guest.display_name;
+            }
+          }
+          
+          // Add message to state
+          setMessages(prev => [...prev, {
+            id: newMsg.id,
+            sender_id: newMsg.sender_id,
+            sender_name: senderName,
+            sender_image: senderImage,
+            original_text: newMsg.original_text,
+            translated_text: undefined,
+            created_at: newMsg.created_at,
+            media_url: newMsg.attachment_url
+          }]);
+          
+          // Mark as read if from another user
+          if (newMsg.sender_id !== currentUser.id) {
+            await supabase
+              .from("message_read_receipts")
+              .insert({
+                message_id: newMsg.id,
+                user_id: currentUser.id,
+                read_at: new Date().toISOString()
+              });
+          }
+        })
+      // Listen for translation updates
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "message_translations", filter: `user_id=eq.${currentUser.id}` },
         (payload) => {
           const t = payload.new as any;
+          console.log('Translation received:', t);
           setMessages(prev => prev.map(m => m.id === t.message_id ? { ...m, translated_text: t.translated_text } : m));
         })
       .subscribe();
