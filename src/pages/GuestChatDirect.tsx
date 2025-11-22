@@ -31,20 +31,21 @@ export default function GuestChatDirect() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Create authenticated supabase client for guest
-  const guestSupabase = guestJwt 
-    ? createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${guestJwt}`
-            }
+  const getAuthenticatedClient = () => {
+    if (!guestJwt) return supabase;
+    
+    return createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${guestJwt}`
           }
         }
-      )
-    : supabase;
+      }
+    );
+  };
 
   useEffect(() => {
     if (!token) {
@@ -75,15 +76,14 @@ export default function GuestChatDirect() {
         return;
       }
 
-      if ('conversation_id' in result && 'guest_id' in result) {
+      if ('conversation_id' in result && 'guest_id' in result && 'guest_jwt' in result) {
         console.log("Setting conversation_id:", result.conversation_id, "guest_id:", result.guest_id);
         setConversationId(String(result.conversation_id));
         setGuestId(String(result.guest_id));
         setGuestJwt(String(result.guest_jwt));
-        // Wait for JWT to be set before loading messages
-        setTimeout(() => {
-          loadMessages(String(result.conversation_id));
-        }, 100);
+        
+        // Load messages with the JWT
+        await loadMessagesWithJwt(String(result.conversation_id), String(result.guest_jwt));
       }
       setLoading(false);
     } catch (err: any) {
@@ -93,9 +93,22 @@ export default function GuestChatDirect() {
     }
   };
 
-  const loadMessages = async (chatId: string) => {
+  const loadMessagesWithJwt = async (chatId: string, jwt: string) => {
     console.log("Loading messages for chat:", chatId);
-    const { data, error } = await guestSupabase
+    
+    const client = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${jwt}`
+          }
+        }
+      }
+    );
+    
+    const { data, error } = await client
       .from("messages")
       .select("id, original_text, sender_type, created_at, sender_id")
       .eq("chat_id", chatId)
@@ -125,10 +138,20 @@ export default function GuestChatDirect() {
     scrollToBottom();
   };
 
+  const loadMessages = async (chatId: string) => {
+    if (!guestJwt) {
+      console.error("Cannot load messages without JWT");
+      return;
+    }
+    await loadMessagesWithJwt(chatId, guestJwt);
+  };
+
   useEffect(() => {
     if (!conversationId || !guestJwt) return;
 
-    const channel = guestSupabase
+    const client = getAuthenticatedClient();
+    
+    const channel = client
       .channel(`chat:${conversationId}`)
       .on(
         "postgres_changes",
@@ -155,7 +178,7 @@ export default function GuestChatDirect() {
       .subscribe();
 
     return () => {
-      guestSupabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
   }, [conversationId, guestJwt]);
 
@@ -168,11 +191,12 @@ export default function GuestChatDirect() {
   };
 
   const handleSend = async () => {
-    if (!newMessageText.trim()) return;
+    if (!newMessageText.trim() || !guestJwt) return;
 
     setSending(true);
     try {
-      const { error } = await guestSupabase.from("messages").insert({
+      const client = getAuthenticatedClient();
+      const { error } = await client.from("messages").insert({
         chat_id: conversationId,
         sender_type: "guest",
         sender_id: guestId,
