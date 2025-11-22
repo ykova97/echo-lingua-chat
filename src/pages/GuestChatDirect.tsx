@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { createClient } from "@supabase/supabase-js";
 import { createGuestSession } from "@/lib/createGuestSession";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const SUPABASE_URL = "https://zakhdgsapuahjuqsbsfd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpha2hkZ3NhcHVhaGp1cXNic2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjExNjI5NTMsImV4cCI6MjA3NjczODk1M30.7lmWAZSEjHsF6IE1eekVZi_8PPXczm9jN-pk6i2cBPE";
@@ -19,8 +23,12 @@ export default function GuestChatDirect() {
   const [guestId, setGuestId] = useState<string>("");
   const [guestJwt, setGuestJwt] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessageText, setNewMessageText] = useState("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!token) {
@@ -81,6 +89,43 @@ export default function GuestChatDirect() {
     init();
   }, [token]);
 
+  const handleSend = async () => {
+    if (!newMessageText.trim() || !guestJwt || !conversationId) return;
+
+    setSending(true);
+    try {
+      const client = createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+        {
+          global: {
+            headers: { Authorization: `Bearer ${guestJwt}` }
+          }
+        }
+      );
+
+      const { error } = await client.from("messages").insert({
+        chat_id: conversationId,
+        sender_type: "guest",
+        sender_id: guestId,
+        original_text: newMessageText.trim(),
+        source_language: "en",
+      });
+
+      if (error) throw error;
+
+      setNewMessageText("");
+    } catch (err: any) {
+      toast({
+        title: "Failed to send message",
+        description: err?.message || "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -103,7 +148,7 @@ export default function GuestChatDirect() {
     <div className="flex flex-col h-screen bg-background">
       <header className="border-b border-border p-4">
         <h1 className="text-xl font-semibold text-center text-foreground">
-          Connected - Step 3: Messages loaded
+          Connected - Step 4: Can send messages
         </h1>
       </header>
 
@@ -134,6 +179,27 @@ export default function GuestChatDirect() {
               </div>
             ))
           )}
+        </div>
+      </div>
+
+      <div className="border-t border-border p-4">
+        <div className="flex gap-2 max-w-2xl mx-auto">
+          <Input
+            value={newMessageText}
+            onChange={(e) => setNewMessageText(e.target.value)}
+            placeholder="Type a message..."
+            onKeyPress={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={sending}
+            className="flex-1"
+          />
+          <Button onClick={handleSend} disabled={sending || !newMessageText.trim()}>
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
