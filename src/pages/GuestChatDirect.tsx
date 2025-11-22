@@ -67,6 +67,7 @@ export default function GuestChatDirect() {
       
       if ('error' in result) {
         const errorMsg = String(result.error);
+        console.error("Guest session error:", errorMsg);
         if (errorMsg === 'invalid_or_expired') {
           setError("This link has expired. Ask them to show a new QR.");
         } else {
@@ -78,12 +79,20 @@ export default function GuestChatDirect() {
 
       if ('conversation_id' in result && 'guest_id' in result && 'guest_jwt' in result) {
         console.log("Setting conversation_id:", result.conversation_id, "guest_id:", result.guest_id);
+        console.log("JWT received:", result.guest_jwt ? "YES" : "NO");
         setConversationId(String(result.conversation_id));
         setGuestId(String(result.guest_id));
         setGuestJwt(String(result.guest_jwt));
         
         // Load messages with the JWT
-        await loadMessagesWithJwt(String(result.conversation_id), String(result.guest_jwt));
+        try {
+          await loadMessagesWithJwt(String(result.conversation_id), String(result.guest_jwt));
+        } catch (msgError) {
+          console.error("Error loading messages:", msgError);
+        }
+      } else {
+        console.error("Missing required fields in result:", result);
+        setError("Failed to initialize session");
       }
       setLoading(false);
     } catch (err: any) {
