@@ -27,7 +27,6 @@ export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>("");
-  const [generatingLink, setGeneratingLink] = useState(false);
   const { toast } = useToast();
 
   const generateQRCode = async () => {
@@ -35,72 +34,25 @@ export default function ProfileQRCode() {
       setLoading(true);
       setErrorMsg("");
 
-      // Get current user from Supabase auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        setErrorMsg("Please sign in to generate QR code.");
-        setLoading(false);
-        return;
-      }
-
-      const baseUrl = ORIGIN;
-      console.log("Generating QR with baseUrl:", baseUrl);
-      console.log("Current window.location.origin:", window.location.origin);
-
-      // Call the edge function to create the invite
-      const res = await fetch(`${BASE}/create-qr-invite`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          inviterId: user.id, 
-          ttlHours: 24, 
-          maxUses: 5,
-          baseUrl
-        })
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to create invite");
-      }
-      
-      const data = await res.json();
-      if (data?.inviteUrl) {
-        setInviteUrl(data.inviteUrl);
-      }
-    } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to create invite.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateShareLink = async () => {
-    try {
-      setGeneratingLink(true);
       const result = await generateShareLink();
+      setInviteUrl(result.share_url);
       
       toast({
         title: "Share link generated!",
-        description: "Link copied to clipboard",
+        description: "QR code updated with new link",
       });
-      
-      // Copy to clipboard
-      await navigator.clipboard.writeText(result.share_url);
-      
-      // Also update the QR code with this link
-      setInviteUrl(result.share_url);
     } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to generate share link.");
       toast({
         title: "Failed to generate link",
         description: err?.message || "Please try again",
         variant: "destructive",
       });
     } finally {
-      setGeneratingLink(false);
+      setLoading(false);
     }
   };
+
 
   useEffect(() => {
     generateQRCode();
@@ -120,13 +72,6 @@ export default function ProfileQRCode() {
         </Button>
         <Button variant="outline" onClick={generateQRCode} disabled={loading}>
           {loading ? "Regenerating..." : "Regenerate"}
-        </Button>
-        <Button
-          variant="outline"
-          onClick={handleGenerateShareLink}
-          disabled={generatingLink}
-        >
-          {generatingLink ? "Generating..." : "New Share Link"}
         </Button>
         <Button
           onClick={() => {
