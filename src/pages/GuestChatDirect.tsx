@@ -105,46 +105,56 @@ export default function GuestChatDirect() {
   const loadMessagesWithJwt = async (chatId: string, jwt: string) => {
     console.log("Loading messages for chat:", chatId);
     
-    const client = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${jwt}`
+    try {
+      const client = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${jwt}`
+            }
           }
         }
+      );
+      
+      const { data, error } = await client
+        .from("messages")
+        .select("id, original_text, sender_type, created_at, sender_id")
+        .eq("chat_id", chatId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error loading messages:", error);
+        toast({
+          title: "Error loading messages",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
       }
-    );
-    
-    const { data, error } = await client
-      .from("messages")
-      .select("id, original_text, sender_type, created_at, sender_id")
-      .eq("chat_id", chatId)
-      .order("created_at", { ascending: true });
+      
+      console.log("Loaded messages:", data);
 
-    if (error) {
-      console.error("Error loading messages:", error);
-      toast({
-        title: "Error loading messages",
-        description: error.message,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    console.log("Loaded messages:", data);
-
-    setMessages(
-      data.map((msg) => ({
+      const mappedMessages = (data || []).map((msg) => ({
         id: msg.id,
         content: msg.original_text,
         sender_type: msg.sender_type,
         created_at: msg.created_at,
-      }))
-    );
+      }));
+      
+      console.log("Setting messages:", mappedMessages);
+      setMessages(mappedMessages);
 
-    scrollToBottom();
+      scrollToBottom();
+    } catch (error) {
+      console.error("Exception loading messages:", error);
+      toast({
+        title: "Failed to load messages",
+        description: "Please try refreshing the page",
+        variant: "destructive",
+      });
+    }
   };
 
   const loadMessages = async (chatId: string) => {
