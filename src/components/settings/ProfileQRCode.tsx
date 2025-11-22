@@ -40,6 +40,10 @@ export default function ProfileQRCode() {
         return;
       }
 
+      const baseUrl = ORIGIN;
+      console.log("Generating QR with baseUrl:", baseUrl);
+      console.log("Current window.location.origin:", window.location.origin);
+
       // Call the edge function to create the invite
       const res = await fetch(`${BASE}/create-qr-invite`, {
         method: "POST",
@@ -48,7 +52,7 @@ export default function ProfileQRCode() {
           inviterId: user.id, 
           ttlHours: 24, 
           maxUses: 5,
-          baseUrl: ORIGIN
+          baseUrl
         })
       });
 
