@@ -35,10 +35,16 @@ export default function Chat() {
         // Load chat meta (optional: name/avatar)
         const { data: chat } = await supabase
           .from("chats")
-          .select("*")
+          .select("*, guest_sessions(display_name)")
           .eq("id", chatId)
           .single();
-        if (chat?.name) setChatTitle(chat.name);
+        
+        if (chat?.name) {
+          setChatTitle(chat.name);
+        } else if (chat?.guest_session_id && chat.guest_sessions) {
+          // @ts-ignore
+          setChatTitle(chat.guest_sessions.display_name || "Guest chat");
+        }
 
         await loadMessages();
       } catch (err) {
@@ -70,12 +76,21 @@ export default function Chat() {
     }
 
     const senderIds = Array.from(new Set(msgs.map((m: any) => m.sender_id)));
+    
+    // Load profiles for user senders
     const { data: profs } = await supabase
       .from("profiles")
       .select("id, name, profile_image")
       .in("id", senderIds);
+    
+    // Load guest sessions for guest senders
+    const { data: guests } = await supabase
+      .from("guest_sessions")
+      .select("id, display_name")
+      .in("id", senderIds);
 
     const profileMap = new Map((profs || []).map((p: any) => [p.id, p]));
+    const guestMap = new Map((guests || []).map((g: any) => [g.id, g]));
 
     const msgIds = msgs.map((m: any) => m.id);
     const { data: trans } = await supabase
@@ -87,16 +102,21 @@ export default function Chat() {
     const transMap = new Map((trans || []).map((t: any) => [t.message_id, t.translated_text]));
 
     const assembled: ChatScopeMessage[] = msgs
-      .map((m: any) => ({
-        id: m.id,
-        sender_id: m.sender_id,
-        sender_name: profileMap.get(m.sender_id)?.name,
-        sender_image: profileMap.get(m.sender_id)?.profile_image,
-        original_text: m.original_text,
-        translated_text: transMap.get(m.id),
-        created_at: m.created_at,
-        media_url: m.attachment_url
-      }))
+      .map((m: any) => {
+        const profile = profileMap.get(m.sender_id);
+        const guest = guestMap.get(m.sender_id);
+        
+        return {
+          id: m.id,
+          sender_id: m.sender_id,
+          sender_name: profile?.name || guest?.display_name || "Unknown",
+          sender_image: profile?.profile_image,
+          original_text: m.original_text,
+          translated_text: transMap.get(m.id),
+          created_at: m.created_at,
+          media_url: m.attachment_url
+        };
+      })
       .reverse();
 
     setMessages(assembled);

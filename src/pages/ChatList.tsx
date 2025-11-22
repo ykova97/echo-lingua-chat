@@ -34,6 +34,11 @@ interface Chat {
   name: string | null;
   created_at: string;
   participants: any[];
+  guest_session_id?: string | null;
+  guest_session?: {
+    display_name: string;
+    preferred_language: string;
+  } | null;
   last_message?: {
     text: string;
     created_at: string;
@@ -114,7 +119,7 @@ const ChatList = () => {
           async (payload) => {
             const newMsg = payload.new as any;
             
-            // Check if this message is in one of the user's chats
+            // Check if this message is in one of the user's chats (either as participant or creator)
             const { data: isParticipant } = await supabase
               .from('chat_participants')
               .select('chat_id')
@@ -122,7 +127,14 @@ const ChatList = () => {
               .eq('user_id', currentUser.id)
               .maybeSingle();
             
-            if (!isParticipant) return;
+            const { data: isCreator } = await supabase
+              .from('chats')
+              .select('id')
+              .eq('id', newMsg.chat_id)
+              .eq('created_by', currentUser.id)
+              .maybeSingle();
+            
+            if (!isParticipant && !isCreator) return;
             
             // Try to get translation for user's preferred language
             let messageText = newMsg.original_text;
@@ -302,7 +314,7 @@ const ChatList = () => {
 
       const user = session.user;
 
-      // Get user's chats
+      // Get user's chats where they are a participant
       const { data: chatParticipants, error } = await supabase
         .from("chat_participants")
         .select(`
@@ -311,19 +323,40 @@ const ChatList = () => {
             id,
             type,
             name,
-            created_at
+            created_at,
+            guest_session_id
           )
         `)
         .eq("user_id", user.id);
 
       if (error) throw error;
-      if (!chatParticipants || chatParticipants.length === 0) {
+
+      // Get guest chats where user is the owner
+      const { data: guestChats } = await supabase
+        .from("chats")
+        .select("id, type, name, created_at, guest_session_id")
+        .eq("created_by", user.id)
+        .not("guest_session_id", "is", null);
+
+      // Combine both sets of chats, avoiding duplicates
+      const allChats = [...(chatParticipants || []).map((cp: any) => cp.chats)];
+      const existingChatIds = new Set(allChats.map(c => c.id));
+      
+      if (guestChats) {
+        guestChats.forEach(gc => {
+          if (!existingChatIds.has(gc.id)) {
+            allChats.push(gc);
+          }
+        });
+      }
+
+      if (allChats.length === 0) {
         setChats([]);
         setLoading(false);
         return;
       }
 
-      const chatIds = chatParticipants.map((cp: any) => cp.chat_id);
+      const chatIds = allChats.map((c: any) => c.id);
 
       // Batch fetch: Get ALL participants for ALL chats in one query
       const { data: allParticipants } = await supabase
@@ -340,11 +373,17 @@ const ChatList = () => {
         .select("id, name, profile_image, preferred_language")
         .in("id", uniqueUserIds);
 
-      // Batch fetch: Get ALL guest sessions in one query
+      // Batch fetch: Get ALL guest sessions in one query (both as participants and linked to chats)
+      const guestSessionIds = allChats
+        .filter((c: any) => c.guest_session_id)
+        .map((c: any) => c.guest_session_id);
+      
+      const allGuestIds = [...new Set([...uniqueUserIds, ...guestSessionIds])];
+      
       const { data: allGuests } = await supabase
         .from("guest_sessions")
         .select("id, display_name, preferred_language")
-        .in("id", uniqueUserIds);
+        .in("id", allGuestIds);
 
       // Create lookup maps for fast access
       const profileMap = new Map((allProfiles || []).map((p: any) => [p.id, p]));
@@ -428,8 +467,7 @@ const ChatList = () => {
       });
 
       // Assemble final chat data
-      const chatsWithDetails = chatParticipants.map((cp: any) => {
-        const chat = cp.chats;
+      const chatsWithDetails = allChats.map((chat: any) => {
         const lastMessage = lastMessageByChat.get(chat.id);
         const translatedText = lastMessage 
           ? (translationMap.get(lastMessage.id) || lastMessage.original_text)
@@ -443,6 +481,7 @@ const ChatList = () => {
             created_at: lastMessage.created_at,
           } : undefined,
           unread_count: unreadCountByChat.get(chat.id) || 0,
+          guest_session: chat.guest_session_id ? guestMap.get(chat.guest_session_id) : null,
         };
       });
 
@@ -467,11 +506,16 @@ const ChatList = () => {
   const getChatName = (chat: Chat) => {
     if (chat.name) return chat.name;
     
+    // Check if it's a guest chat
+    if (chat.guest_session_id && chat.guest_session) {
+      return chat.guest_session.display_name || "Guest chat";
+    }
+    
     const otherParticipants = chat.participants.filter(
       (p: any) => p.user_id !== currentUser?.id
     );
     
-    if (otherParticipants.length === 0) return "Chat";
+    if (otherParticipants.length === 0) return "Guest chat";
     if (otherParticipants.length === 1) {
       return otherParticipants[0].profiles?.name || "User";
     }
