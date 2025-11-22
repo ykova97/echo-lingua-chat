@@ -100,50 +100,48 @@ export default function GuestChatDirect() {
     init();
   }, [token]);
 
-  // Real-time subscription
+  // Poll for new messages instead of realtime (guest JWT doesn't work with Supabase realtime)
   useEffect(() => {
-    if (!conversationId || !guestJwt) return;
+    if (!conversationId) return;
 
-    const client = createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY,
-      {
-        global: {
-          headers: { Authorization: `Bearer ${guestJwt}` }
-        }
-      }
-    );
-    
-    const channel = client
-      .channel(`chat:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `chat_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const newMsg = payload.new as any;
-          setMessages((prev) => [
+    const pollMessages = async () => {
+      try {
+        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Get the latest message timestamp we have
+        const latestTimestamp = messages.length > 0 
+          ? messages[messages.length - 1].created_at 
+          : new Date(0).toISOString();
+        
+        const { data: newMsgs } = await client
+          .from("messages")
+          .select("id, original_text, sender_type, created_at")
+          .eq("chat_id", conversationId)
+          .gt("created_at", latestTimestamp)
+          .order("created_at", { ascending: true });
+
+        if (newMsgs && newMsgs.length > 0) {
+          setMessages(prev => [
             ...prev,
-            {
-              id: newMsg.id,
-              content: newMsg.original_text,
-              sender_type: newMsg.sender_type,
-              created_at: newMsg.created_at,
-            },
+            ...newMsgs.map((msg) => ({
+              id: msg.id,
+              content: msg.original_text,
+              sender_type: msg.sender_type,
+              created_at: msg.created_at,
+            }))
           ]);
           scrollToBottom();
         }
-      )
-      .subscribe();
-
-    return () => {
-      client.removeChannel(channel);
+      } catch (err) {
+        console.error("Error polling messages:", err);
+      }
     };
-  }, [conversationId, guestJwt]);
+
+    // Poll every 2 seconds
+    const interval = setInterval(pollMessages, 2000);
+    
+    return () => clearInterval(interval);
+  }, [conversationId, messages]);
 
   const handleSend = async () => {
     if (!newMessageText.trim() || !guestJwt || !conversationId) return;
