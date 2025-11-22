@@ -485,6 +485,13 @@ const ChatList = () => {
         };
       });
 
+      // Sort chats by most recent activity (newest first)
+      chatsWithDetails.sort((a, b) => {
+        const aTime = a.last_message?.created_at || a.created_at;
+        const bTime = b.last_message?.created_at || b.created_at;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      });
+
       setChats(chatsWithDetails);
     } catch (error: any) {
       console.error("Error loading chats:", error);
