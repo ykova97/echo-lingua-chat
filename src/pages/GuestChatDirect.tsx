@@ -63,22 +63,16 @@ export default function GuestChatDirect() {
         setGuestId(result.guest_id);
         setGuestJwt(result.guest_jwt);
         
-        // Load messages
-        const client = createClient(
-          SUPABASE_URL,
-          SUPABASE_ANON_KEY,
-          {
-            global: {
-              headers: { Authorization: `Bearer ${result.guest_jwt}` }
-            }
-          }
-        );
+        // Load messages (don't use guest JWT, use anon key with RLS policy)
+        const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        const { data: msgs } = await client
+        const { data: msgs, error: msgsError } = await client
           .from("messages")
           .select("id, original_text, sender_type, created_at")
           .eq("chat_id", result.conversation_id)
           .order("created_at", { ascending: true });
+
+        console.log("Initial messages:", msgs, "error:", msgsError);
 
         if (msgs) {
           setMessages(msgs.map((msg) => ({
@@ -113,12 +107,14 @@ export default function GuestChatDirect() {
           ? messages[messages.length - 1].created_at 
           : new Date(0).toISOString();
         
-        const { data: newMsgs } = await client
+        const { data: newMsgs, error: pollError } = await client
           .from("messages")
           .select("id, original_text, sender_type, created_at")
           .eq("chat_id", conversationId)
           .gt("created_at", latestTimestamp)
           .order("created_at", { ascending: true });
+
+        console.log("Poll result:", { newMsgs, pollError, latestTimestamp });
 
         if (newMsgs && newMsgs.length > 0) {
           setMessages(prev => [
@@ -150,6 +146,8 @@ export default function GuestChatDirect() {
     try {
       const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       
+      console.log("Sending message...");
+      
       const { data, error } = await client.functions.invoke("send-guest-message", {
         body: {
           chatId: conversationId,
@@ -158,10 +156,23 @@ export default function GuestChatDirect() {
         },
       });
 
+      console.log("Send response:", { data, error });
+
       if (error) {
         console.error("Failed to send message:", error);
         throw error;
       }
+
+      // Add message to local state immediately
+      setMessages(prev => [
+        ...prev,
+        {
+          id: data.id || crypto.randomUUID(),
+          content: newMessageText.trim(),
+          sender_type: "guest",
+          created_at: new Date().toISOString(),
+        }
+      ]);
 
       setNewMessageText("");
       scrollToBottom();
