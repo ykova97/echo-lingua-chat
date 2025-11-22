@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import { createGuestSession } from "@/lib/createGuestSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ export default function GuestChatDirect() {
   
   const [conversationId, setConversationId] = useState<string>("");
   const [guestId, setGuestId] = useState<string>("");
+  const [guestJwt, setGuestJwt] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessageText, setNewMessageText] = useState("");
   const [error, setError] = useState<string>("");
@@ -28,6 +30,21 @@ export default function GuestChatDirect() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Create authenticated supabase client for guest
+  const guestSupabase = guestJwt 
+    ? createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${guestJwt}`
+            }
+          }
+        }
+      )
+    : supabase;
 
   useEffect(() => {
     if (!token) {
@@ -42,7 +59,10 @@ export default function GuestChatDirect() {
   const initializeGuestSession = async () => {
     try {
       setLoading(true);
+      console.log("Initializing guest session with token:", token);
       const result = await createGuestSession({ token: token! });
+      
+      console.log("Guest session result:", result);
       
       if ('error' in result) {
         const errorMsg = String(result.error);
@@ -56,21 +76,28 @@ export default function GuestChatDirect() {
       }
 
       if ('conversation_id' in result && 'guest_id' in result) {
+        console.log("Setting conversation_id:", result.conversation_id, "guest_id:", result.guest_id);
         setConversationId(String(result.conversation_id));
         setGuestId(String(result.guest_id));
-        loadMessages(String(result.conversation_id));
+        setGuestJwt(String(result.guest_jwt));
+        // Wait for JWT to be set before loading messages
+        setTimeout(() => {
+          loadMessages(String(result.conversation_id));
+        }, 100);
       }
       setLoading(false);
     } catch (err: any) {
+      console.error("Error initializing guest session:", err);
       setError(err?.message || "Failed to join chat");
       setLoading(false);
     }
   };
 
   const loadMessages = async (chatId: string) => {
-    const { data, error } = await supabase
+    console.log("Loading messages for chat:", chatId);
+    const { data, error } = await guestSupabase
       .from("messages")
-      .select("id, original_text, sender_type, created_at")
+      .select("id, original_text, sender_type, created_at, sender_id")
       .eq("chat_id", chatId)
       .order("created_at", { ascending: true });
 
@@ -83,6 +110,8 @@ export default function GuestChatDirect() {
       });
       return;
     }
+    
+    console.log("Loaded messages:", data);
 
     setMessages(
       data.map((msg) => ({
@@ -97,9 +126,9 @@ export default function GuestChatDirect() {
   };
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !guestJwt) return;
 
-    const channel = supabase
+    const channel = guestSupabase
       .channel(`chat:${conversationId}`)
       .on(
         "postgres_changes",
@@ -126,9 +155,9 @@ export default function GuestChatDirect() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      guestSupabase.removeChannel(channel);
     };
-  }, [conversationId]);
+  }, [conversationId, guestJwt]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -143,7 +172,7 @@ export default function GuestChatDirect() {
 
     setSending(true);
     try {
-      const { error } = await supabase.from("messages").insert({
+      const { error } = await guestSupabase.from("messages").insert({
         chat_id: conversationId,
         sender_type: "guest",
         sender_id: guestId,
