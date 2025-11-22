@@ -63,7 +63,7 @@ export default function Chat() {
       .from("messages")
       .select("*")
       .eq("chat_id", chatId)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: true })
       .limit(PAGE_SIZE);
 
     if (before) query = query.lt("created_at", before);
