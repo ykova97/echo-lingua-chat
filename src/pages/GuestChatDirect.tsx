@@ -148,6 +148,11 @@ export default function GuestChatDirect() {
   const handleSend = async () => {
     if (!newMessageText.trim() || !guestJwt || !conversationId) return;
 
+    console.log("📤 Attempting to send message...");
+    console.log("Chat ID:", conversationId);
+    console.log("Guest ID:", guestId);
+    console.log("JWT present:", !!guestJwt);
+    
     setSending(true);
     try {
       const client = createClient(
@@ -160,19 +165,30 @@ export default function GuestChatDirect() {
         }
       );
 
-      const { error } = await client.from("messages").insert({
+      const messageData = {
         chat_id: conversationId,
         sender_type: "guest",
         sender_id: guestId,
         original_text: newMessageText.trim(),
         source_language: "en",
-      });
+      };
+      
+      console.log("Inserting message:", messageData);
 
-      if (error) throw error;
+      const { data, error } = await client.from("messages").insert(messageData).select();
 
+      console.log("Insert response:", { data, error });
+
+      if (error) {
+        console.error("❌ Send error details:", error);
+        throw error;
+      }
+
+      console.log("✅ Message sent successfully");
       setNewMessageText("");
       scrollToBottom();
     } catch (err: any) {
+      console.error("❌ handleSend error:", err);
       toast({
         title: "Failed to send message",
         description: err?.message || "Please try again",
