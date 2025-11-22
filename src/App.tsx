@@ -38,7 +38,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/internal/runbook" element={<InternalRunbook />} />
-            <Route path="/guest" element={<GuestChatDirect />} />
+            <Route path="/guest/:token" element={<GuestChatDirect />} />
             <Route path="/guest/:token" element={<GuestJoin />} />
             <Route path="/join/:slug" element={<GuestJoin />} />
             <Route path="/guest-chat/:chatId" element={<GuestChat />} />
