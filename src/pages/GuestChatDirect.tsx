@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { createGuestSession } from "@/lib/createGuestSession";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,7 @@ interface Message {
 }
 
 export default function GuestChatDirect() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("t");
+  const { token } = useParams<{ token: string }>();
   
   const [conversationId, setConversationId] = useState<string>("");
   const [guestId, setGuestId] = useState<string>("");
