@@ -204,6 +204,7 @@ export default function Chat() {
       const { error: msgErr } = await supabase.from("messages").insert({
         chat_id: chatId,
         sender_id: currentUser.id,
+        sender_type: 'user',
         original_text: publicUrl,    // our wrapper will render this as an image bubble
         source_language: "en"
       });

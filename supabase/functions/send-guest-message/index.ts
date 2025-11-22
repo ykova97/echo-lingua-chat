@@ -72,6 +72,7 @@ serve(async (req) => {
       .insert({
         chat_id: chatId,
         sender_id: guestSessionId,
+        sender_type: 'guest',
         original_text: message,
         source_language: "auto", // Could detect language here
       })

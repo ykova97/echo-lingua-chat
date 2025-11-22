@@ -84,33 +84,47 @@ export type Database = {
       }
       chats: {
         Row: {
+          active: boolean | null
           created_at: string
           created_by: string | null
           delete_after: string | null
+          guest_session_id: string | null
           id: string
           is_ephemeral: boolean
           name: string | null
           type: string
         }
         Insert: {
+          active?: boolean | null
           created_at?: string
           created_by?: string | null
           delete_after?: string | null
+          guest_session_id?: string | null
           id?: string
           is_ephemeral?: boolean
           name?: string | null
           type: string
         }
         Update: {
+          active?: boolean | null
           created_at?: string
           created_by?: string | null
           delete_after?: string | null
+          guest_session_id?: string | null
           id?: string
           is_ephemeral?: boolean
           name?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chats_guest_session_id_fkey"
+            columns: ["guest_session_id"]
+            isOneToOne: false
+            referencedRelation: "guest_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       guest_invites: {
         Row: {
@@ -310,6 +324,7 @@ export type Database = {
           original_text: string
           reply_to_id: string | null
           sender_id: string
+          sender_type: string
           source_language: string
         }
         Insert: {
@@ -323,6 +338,7 @@ export type Database = {
           original_text: string
           reply_to_id?: string | null
           sender_id: string
+          sender_type: string
           source_language: string
         }
         Update: {
@@ -336,6 +352,7 @@ export type Database = {
           original_text?: string
           reply_to_id?: string | null
           sender_id?: string
+          sender_type?: string
           source_language?: string
         }
         Relationships: [
