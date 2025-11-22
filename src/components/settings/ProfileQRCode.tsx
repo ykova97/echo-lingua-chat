@@ -1,27 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import QRCode from "qrcode.react";
-import { supabase } from "@/integrations/supabase/client";
 import { generateShareLink } from "@/lib/generateShareLink";
 import { useToast } from "@/hooks/use-toast";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const BASE = `${SUPABASE_URL}/functions/v1`;
-// Extract Lovable project ID from current URL (works in preview and deployed)
-const getLovableProjectUrl = () => {
-  const currentOrigin = window.location.origin;
-  // If already on lovableproject.com, use current origin
-  if (currentOrigin.includes('.lovableproject.com')) {
-    return currentOrigin;
-  }
-  // Fallback to extracting from preview URL pattern
-  const match = currentOrigin.match(/https:\/\/([a-f0-9-]+)--/);
-  if (match) {
-    return `https://${match[1]}.lovableproject.com`;
-  }
-  return currentOrigin;
-};
-const ORIGIN = getLovableProjectUrl();
 
 export default function ProfileQRCode() {
   const [inviteUrl, setInviteUrl] = useState<string>("");
