@@ -72,8 +72,8 @@ serve(async (req) => {
       throw insertError;
     }
 
-    // Build the share URL with hardcoded production domain
-    const shareUrl = `https://lynk-chat.com/guest/${token}`;
+    // Build the share URL - use preview URL for testing
+    const shareUrl = `https://c4d492cf-e7b4-4042-863a-701cede4e153.lovableproject.com/guest/${token}`;
 
     console.log("Share link generated successfully:", shareUrl);
 
