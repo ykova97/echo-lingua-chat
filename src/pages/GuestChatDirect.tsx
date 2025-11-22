@@ -30,6 +30,7 @@ export default function GuestChatDirect() {
   const [sending, setSending] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const seenMessageIds = useRef(new Set<string>());
   const { toast } = useToast();
 
   const scrollToBottom = () => {
@@ -75,12 +76,15 @@ export default function GuestChatDirect() {
         console.log("Initial messages:", msgs, "error:", msgsError);
 
         if (msgs) {
-          setMessages(msgs.map((msg) => ({
+          const messageData = msgs.map((msg) => ({
             id: msg.id,
             content: msg.original_text,
             sender_type: msg.sender_type,
             created_at: msg.created_at,
-          })));
+          }));
+          setMessages(messageData);
+          // Track initial message IDs
+          messageData.forEach(msg => seenMessageIds.current.add(msg.id));
         }
         
         setLoading(false);
@@ -97,36 +101,38 @@ export default function GuestChatDirect() {
   // Poll for new messages instead of realtime (guest JWT doesn't work with Supabase realtime)
   useEffect(() => {
     if (!conversationId) return;
-
+    
     const pollMessages = async () => {
       try {
         const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Get the latest message timestamp we have
-        const latestTimestamp = messages.length > 0 
-          ? messages[messages.length - 1].created_at 
-          : new Date(0).toISOString();
-        
-        const { data: newMsgs, error: pollError } = await client
+        // Fetch all messages and filter out ones we've already seen
+        const { data: allMsgs, error: pollError } = await client
           .from("messages")
           .select("id, original_text, sender_type, created_at")
           .eq("chat_id", conversationId)
-          .gt("created_at", latestTimestamp)
           .order("created_at", { ascending: true });
 
-        console.log("Poll result:", { newMsgs, pollError, latestTimestamp });
+        console.log("Poll result:", { total: allMsgs?.length, pollError, seen: seenMessageIds.current.size });
 
-        if (newMsgs && newMsgs.length > 0) {
-          setMessages(prev => [
-            ...prev,
-            ...newMsgs.map((msg) => ({
-              id: msg.id,
-              content: msg.original_text,
-              sender_type: msg.sender_type,
-              created_at: msg.created_at,
-            }))
-          ]);
-          scrollToBottom();
+        if (allMsgs && allMsgs.length > 0) {
+          const newMsgs = allMsgs.filter(msg => !seenMessageIds.current.has(msg.id));
+          
+          if (newMsgs.length > 0) {
+            console.log("New messages found:", newMsgs.length);
+            newMsgs.forEach(msg => seenMessageIds.current.add(msg.id));
+            
+            setMessages(prev => [
+              ...prev,
+              ...newMsgs.map((msg) => ({
+                id: msg.id,
+                content: msg.original_text,
+                sender_type: msg.sender_type,
+                created_at: msg.created_at,
+              }))
+            ]);
+            scrollToBottom();
+          }
         }
       } catch (err) {
         console.error("Error polling messages:", err);
@@ -137,7 +143,7 @@ export default function GuestChatDirect() {
     const interval = setInterval(pollMessages, 2000);
     
     return () => clearInterval(interval);
-  }, [conversationId, messages]);
+  }, [conversationId]);
 
   const handleSend = async () => {
     if (!newMessageText.trim() || !guestJwt || !conversationId) return;
@@ -164,15 +170,15 @@ export default function GuestChatDirect() {
       }
 
       // Add message to local state immediately
-      setMessages(prev => [
-        ...prev,
-        {
-          id: data.id || crypto.randomUUID(),
-          content: newMessageText.trim(),
-          sender_type: "guest",
-          created_at: new Date().toISOString(),
-        }
-      ]);
+      const newMsg = {
+        id: data.id || crypto.randomUUID(),
+        content: newMessageText.trim(),
+        sender_type: "guest",
+        created_at: new Date().toISOString(),
+      };
+      
+      seenMessageIds.current.add(newMsg.id);
+      setMessages(prev => [...prev, newMsg]);
 
       setNewMessageText("");
       scrollToBottom();
