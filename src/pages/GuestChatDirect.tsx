@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { createClient } from "@supabase/supabase-js";
 import { createGuestSession } from "@/lib/createGuestSession";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,7 +29,16 @@ export default function GuestChatDirect() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 100);
+  };
 
   useEffect(() => {
     if (!token) {
@@ -80,6 +90,7 @@ export default function GuestChatDirect() {
         }
         
         setLoading(false);
+        scrollToBottom();
       } catch (err: any) {
         setError(err?.message || "Failed to join chat");
         setLoading(false);
@@ -88,6 +99,51 @@ export default function GuestChatDirect() {
 
     init();
   }, [token]);
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!conversationId || !guestJwt) return;
+
+    const client = createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        global: {
+          headers: { Authorization: `Bearer ${guestJwt}` }
+        }
+      }
+    );
+    
+    const channel = client
+      .channel(`chat:${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `chat_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: newMsg.id,
+              content: newMsg.original_text,
+              sender_type: newMsg.sender_type,
+              created_at: newMsg.created_at,
+            },
+          ]);
+          scrollToBottom();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [conversationId, guestJwt]);
 
   const handleSend = async () => {
     if (!newMessageText.trim() || !guestJwt || !conversationId) return;
@@ -115,6 +171,7 @@ export default function GuestChatDirect() {
       if (error) throw error;
 
       setNewMessageText("");
+      scrollToBottom();
     } catch (err: any) {
       toast({
         title: "Failed to send message",
@@ -148,11 +205,11 @@ export default function GuestChatDirect() {
     <div className="flex flex-col h-screen bg-background">
       <header className="border-b border-border p-4">
         <h1 className="text-xl font-semibold text-center text-foreground">
-          Connected - Step 4: Can send messages
+          You are now connected
         </h1>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-3 max-w-2xl mx-auto">
           {messages.length === 0 ? (
             <p className="text-center text-muted-foreground">No messages yet</p>
@@ -180,7 +237,7 @@ export default function GuestChatDirect() {
             ))
           )}
         </div>
-      </div>
+      </ScrollArea>
 
       <div className="border-t border-border p-4">
         <div className="flex gap-2 max-w-2xl mx-auto">
