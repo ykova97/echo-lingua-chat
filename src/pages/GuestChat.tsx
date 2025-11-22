@@ -9,7 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BASE = `${SUPABASE_URL}/functions/v1`;
-const ORIGIN = (import.meta as any)?.env?.VITE_PUBLIC_APP_URL || window.location.origin;
+// Use deployed lovableproject.com URL instead of preview URL
+const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const ORIGIN = `https://${PROJECT_ID}.lovableproject.com`;
 
 interface Message {
   id: string;
