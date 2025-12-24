@@ -1,9 +1,9 @@
-/* Root background - clean white */
+/* Root background - clean cream */
 .cs-main-container,
 .cs-chat-container,
 .cs-message-list,
 .cs-message-list__scroll-wrapper {
-  background: #ffffff !important;
+  background: hsl(40 33% 96%) !important;
 }
 
 /* Message list padding */
@@ -17,24 +17,24 @@
   margin-bottom: 8px !important;
 }
 
-/* Outgoing messages - iOS blue with shadow */
+/* Outgoing messages - Coral gradient with shadow */
 .cs-message--outgoing .cs-message__content {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  background: linear-gradient(135deg, hsl(25 100% 70%) 0%, hsl(10 100% 65%) 100%) !important;
   color: #ffffff !important;
   border-radius: 18px 18px 4px 18px !important;
   padding: 10px 14px !important;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
+  box-shadow: 0 2px 8px hsla(10 100% 65% / 0.25) !important;
   font-size: 15px !important;
   line-height: 1.4 !important;
 }
 
 /* Incoming messages - soft gray with subtle shadow */
 .cs-message--incoming .cs-message__content {
-  background: #f1f5f9 !important;
-  color: #1e293b !important;
+  background: hsl(0 0% 100%) !important;
+  color: hsl(222 47% 11%) !important;
   border-radius: 18px 18px 18px 4px !important;
   padding: 10px 14px !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 2px hsla(0 0% 0% / 0.05) !important;
   font-size: 15px !important;
   line-height: 1.4 !important;
 }
@@ -43,14 +43,14 @@
 .cs-message__sender {
   font-size: 12px !important;
   font-weight: 600 !important;
-  color: #64748b !important;
+  color: hsl(186 44% 50%) !important;
   margin-bottom: 4px !important;
 }
 
 /* Timestamp styling */
 .cs-message__sent-time {
   font-size: 11px !important;
-  color: #94a3b8 !important;
+  color: hsl(215 16% 47%) !important;
   margin-top: 4px !important;
 }
 
@@ -63,10 +63,10 @@
 .cs-chat-container .cs-message-input,
 div.cs-message-input {
   border: none !important;
-  background: #f2f2f7 !important;
+  background: hsl(40 33% 96%) !important;
   padding: 8px 12px !important;
   box-shadow: none !important;
-  border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  border-top: 1px solid hsla(0 0% 0% / 0.05) !important;
   margin: 0 !important;
 }
 
@@ -82,32 +82,32 @@ div.cs-message-input__content-editor,
   min-height: 36px !important;
   max-height: 120px !important;
   border-radius: 24px !important;
-  background: #ffffff !important;
+  background: hsl(0 0% 100%) !important;
   padding: 8px 16px !important;
   font-size: 16px !important;
-  border: 1px solid #d1d1d6 !important;
+  border: 1px solid hsl(214 32% 91%) !important;
   transition: all 0.2s ease !important;
   margin: 0 !important;
 }
 
 .cs-chat-container .cs-message-input__content-editor:focus,
 div.cs-message-input__content-editor:focus {
-  background: #ffffff !important;
-  border-color: #c7c7cc !important;
+  background: hsl(0 0% 100%) !important;
+  border-color: hsl(186 44% 50%) !important;
   box-shadow: none !important;
   outline: none !important;
 }
 
 .cs-message-input__content-editor[placeholder]:empty:before,
 [contenteditable="true"].cs-message-input__content-editor[placeholder]:empty:before {
-  color: #a0a0a5 !important;
+  color: hsl(215 16% 47%) !important;
   font-weight: 400 !important;
   font-size: 16px !important;
 }
 
-/* Send button styling */
+/* Send button styling - Coral theme */
 .cs-button--send {
-  background: #3b82f6 !important;
+  background: linear-gradient(135deg, hsl(25 100% 70%) 0%, hsl(10 100% 65%) 100%) !important;
   color: #ffffff !important;
   border-radius: 50% !important;
   width: 32px !important;
@@ -122,7 +122,7 @@ div.cs-message-input__content-editor:focus {
 }
 
 .cs-button--send:hover {
-  background: #2563eb !important;
+  background: hsl(10 100% 60%) !important;
   transform: scale(1.05) !important;
 }
 
@@ -146,13 +146,13 @@ div.cs-message-input__content-editor:focus {
 }
 
 .cs-typing-indicator__dot {
-  background: #94a3b8 !important;
+  background: hsl(186 44% 50%) !important;
 }
 
 /* Custom image styling within messages */
 .cs-message__custom-content img {
   border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 2px 8px hsla(0 0% 0% / 0.1) !important;
 }
 
 /* iOS safe area spacing */
